@@ -12,7 +12,8 @@ import org.springframework.stereotype.Service;
 /**
  * 실제 AI 모델이 붙기 전까지 사용하는 규칙(키워드) 기반 mock 구현체.
  * 화물명/원본 입력 텍스트에서 키워드와 숫자를 추출해 운송조건을 추정한다.
- * 정확한 값을 찾지 못하면 보수적인 기본값을 사용하고 {@code estimated=true}로 표시한다.
+ * 정확한 값을 찾지 못하면 {@code estimated=true}로 표시한다.
+ * 부피는 임의로 추정하지 않고 사용자가 입력할 수 있도록 비워 둔다.
  */
 @Service
 public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
@@ -21,7 +22,6 @@ public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
     private static final Pattern VOLUME_PATTERN = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*(cbm|m3|㎥)", Pattern.CASE_INSENSITIVE);
 
     private static final BigDecimal DEFAULT_WEIGHT_KG = BigDecimal.valueOf(50);
-    private static final BigDecimal DEFAULT_VOLUME_CBM = BigDecimal.valueOf(0.3);
 
     @Override
     public CargoAiAnalysisResult analyze(CargoOrder cargoOrder) {
@@ -31,7 +31,7 @@ public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
         boolean volumeFound = VOLUME_PATTERN.matcher(text).find();
 
         BigDecimal weightKg = extractWeightKg(text).orElse(DEFAULT_WEIGHT_KG);
-        BigDecimal volumeCbm = extractVolumeCbm(text).orElse(DEFAULT_VOLUME_CBM);
+        BigDecimal volumeCbm = extractVolumeCbm(text).orElse(null);
         TemperatureCondition temperatureCondition = extractTemperatureCondition(text);
         boolean hazardous = containsAny(text, "위험물", "인화성", "폭발", "화약", "부식성");
         String packagingType = extractPackagingType(text);

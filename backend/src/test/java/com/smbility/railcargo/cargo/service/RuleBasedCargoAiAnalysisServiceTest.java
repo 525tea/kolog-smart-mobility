@@ -2,6 +2,7 @@ package com.smbility.railcargo.cargo.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.smbility.railcargo.auth.domain.Member;
@@ -53,11 +54,12 @@ class RuleBasedCargoAiAnalysisServiceTest {
     }
 
     @Test
-    void 키워드가_없으면_기본값을_사용하고_estimated_true다() {
+    void 부피를_입력하지_않으면_임의의_값을_생성하지_않는다() {
         CargoOrder order = cargoOrder("일반 상품", "특별한 설명 없음");
 
         CargoAiAnalysisResult result = service.analyze(order);
 
+        assertNull(result.volumeCbm());
         assertEquals(TemperatureCondition.ROOM, result.temperatureCondition());
         assertFalse(result.hazardous());
         assertTrue(result.estimated());
