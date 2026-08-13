@@ -1,0 +1,13 @@
+services:
+  nginx:
+    build:
+      context: ..
+      dockerfile: infra/nginx/Dockerfile.tls
+    environment:
+      TLS_SERVER_NAME: ${TLS_SERVER_NAME:?TLS_SERVER_NAME에 도메인 또는 공인 IP를 설정하세요}
+      DOLLAR: "$"
+    ports:
+      - "443:443"
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
