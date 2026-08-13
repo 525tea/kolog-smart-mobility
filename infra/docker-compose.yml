@@ -35,6 +35,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-railcargo}
       JWT_SECRET: ${JWT_SECRET:-local-development-secret-key-please-change-in-production-0123456789}
       SERVER_PORT: 8080
+      DEMO_DATA_ENABLED: ${DEMO_DATA_ENABLED:-true}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
 
