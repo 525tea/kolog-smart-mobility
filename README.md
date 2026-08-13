@@ -217,8 +217,3 @@ KOLOG의 AI 기능은 화물 등록 편의성과 공동운송 후보 탐색을 �
 | 배포 서비스 | [DEPLOYED_APP_URL](https://kolog.net/) |
 | 결과보고서 PDF | [FINAL_REPORT_PDF_URL](https://drive.google.com/drive/shared-with-me?hl=ko) |
 
----
-
-## License
-
-본 프로젝트의 라이선스 정책은 팀 협의 후 추가될 예정입니다.
