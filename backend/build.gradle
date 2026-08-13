@@ -19,7 +19,8 @@ repositories {
 }
 
 ext {
-	set('testcontainersVersion', '1.21.3')
+	// 1.21.4 fixes Docker Engine 29's minimum API 1.44 compatibility while staying on the 1.x API.
+	set('testcontainersVersion', '1.21.4')
 	set('jjwtVersion', '0.12.6')
 }
 
@@ -33,7 +34,7 @@ dependencies {
 	implementation 'org.flywaydb:flyway-mysql'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
 
-	// 공동화물과 화차 간 최적 적재 조합 계산 (CP-SAT)
+	// 최적 적재 조합(공동화물↔화차 배정) 최적화 - CP-SAT
 	implementation 'com.google.ortools:ortools-java:9.14.6206'
 
 	// PDF·이미지 OCR/양식·표 추출 (Google Document AI Form Parser)
