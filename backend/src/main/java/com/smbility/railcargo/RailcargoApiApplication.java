@@ -1,6 +1,7 @@
 package com.smbility.railcargo;
 
 import com.smbility.railcargo.auth.jwt.JwtProperties;
+import com.smbility.railcargo.cargo.ai.GeminiProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration;
@@ -9,7 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableScheduling
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, GeminiProperties.class})
 public class RailcargoApiApplication {
 
     public static void main(String[] args) {

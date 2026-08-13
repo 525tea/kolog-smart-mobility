@@ -5,15 +5,18 @@ import com.smbility.railcargo.cargo.domain.TemperatureCondition;
 import com.smbility.railcargo.cargo.dto.CargoAiAnalysisResult;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 
 /**
- * 실제 AI 모델이 붙기 전까지 사용하는 규칙(키워드) 기반 mock 구현체.
- * 화물명/원본 입력 텍스트에서 키워드와 숫자를 추출해 운송조건을 추정한다.
- * 정확한 값을 찾지 못하면 {@code estimated=true}로 표시한다.
- * 부피는 임의로 추정하지 않고 사용자가 입력할 수 있도록 비워 둔다.
+ * 규칙(키워드) 기반 화물 정보 구조화 구현체. 외부 API 키 없이 항상 동작하는 기본값이며 항상 빈으로 등록된다.
+ * {@code app.ai.provider=gemini}로 설정되면 {@code GeminiCargoAiAnalysisService}가 {@code @Primary}로
+ * 대신 선택되고, 이 클래스는 Gemini 호출 실패 시 폴백(fallback) 용도로도 함께 쓰인다.
+ * 화물명/원본 입력 텍스트에서 키워드와 숫자를 추출해 운송조건을 추정하고,
+ * 값을 실제로 찾지 못한 필드는 {@code lowConfidenceFields}에 담아 화주 확인이 필요함을 표시한다.
  */
 @Service
 public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
@@ -36,10 +39,17 @@ public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
         boolean hazardous = containsAny(text, "위험물", "인화성", "폭발", "화약", "부식성");
         String packagingType = extractPackagingType(text);
         String handlingNote = extractHandlingNote(text);
-        boolean estimated = !weightFound || !volumeFound;
+
+        List<String> lowConfidenceFields = new ArrayList<>();
+        if (!weightFound) {
+            lowConfidenceFields.add("weightKg");
+        }
+        if (!volumeFound) {
+            lowConfidenceFields.add("volumeCbm");
+        }
 
         return new CargoAiAnalysisResult(weightKg, volumeCbm, temperatureCondition, hazardous,
-                packagingType, handlingNote, estimated);
+                packagingType, handlingNote, lowConfidenceFields);
     }
 
     private String normalize(String cargoName, String rawInput) {
