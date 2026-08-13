@@ -1,0 +1,42 @@
+name: smbility-prelab
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-railcargo}
+      MYSQL_USER: ${DB_USERNAME:-railcargo}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-railcargo}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-railcargo_root}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-railcargo_root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-railcargo}
+      DB_USERNAME: ${DB_USERNAME:-railcargo}
+      DB_PASSWORD: ${DB_PASSWORD:-railcargo}
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-key-please-change-in-production-0123456789}
+      SERVER_PORT: 8080
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+
+volumes:
+  mysql_data:
