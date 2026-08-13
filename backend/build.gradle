@@ -33,6 +33,9 @@ dependencies {
 	implementation 'org.flywaydb:flyway-mysql'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
 
+	// 공동화물과 화차 간 최적 적재 조합 계산 (CP-SAT)
+	implementation 'com.google.ortools:ortools-java:9.14.6206'
+
 	// PDF·이미지 OCR/양식·표 추출 (Google Document AI Form Parser)
 	implementation 'com.google.cloud:google-cloud-document-ai:2.85.0'
 	// XLS/XLSX 셀·시트 구조 추출
