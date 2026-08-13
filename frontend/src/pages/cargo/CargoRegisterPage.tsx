@@ -189,6 +189,17 @@ export function CargoRegisterPage() {
     }
   }
 
+  async function analyzeSampleDocument(path: string, fileName: string, contentType: string) {
+    try {
+      const response = await fetch(path);
+      if (!response.ok) throw new Error(`샘플 파일을 불러오지 못했습니다. (${response.status})`);
+      const file = new File([await response.blob()], fileName, { type: contentType });
+      await handleDocumentAttachment(file);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "샘플 문서를 불러오지 못했습니다.");
+    }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (serviceMode === "CO_LOAD" && (outOfCoverage.origin || outOfCoverage.destination)) {
@@ -318,6 +329,20 @@ export function CargoRegisterPage() {
           <details className="rounded-[18px] border border-[#e0e6f0]"><summary className="cursor-pointer px-4 py-3 text-[12px] font-black text-brand-700">문서·자연어·화물가액 추가 입력</summary><div className="space-y-3 border-t border-[#edf1f6] p-4">
             <TextArea rows={3} value={rawInput} onChange={(e) => { setRawInput(e.target.value); setInputMode(e.target.value ? "NATURAL" : "STRUCTURED"); }} placeholder="송장 내용이나 취급 요구사항을 자연어로 입력하세요." />
             <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-gray-300 px-4 py-3 text-sm font-semibold text-gray-600"><input type="file" accept=".pdf,.png,.jpg,.jpeg,.gif,.tif,.tiff,.bmp,.webp,.xls,.xlsx,.txt,.csv,.json,.xml,application/pdf,image/*" className="sr-only" disabled={extractingDocument} onChange={(e) => void handleDocumentAttachment(e.target.files?.[0])} />{extractingDocument ? "문서 분석 중…" : attachmentName ? `${attachmentName} 분석 완료` : "송장·발주서·엑셀·이미지 불러오기"}</label>
+            <section className="rounded-xl bg-[#f3f6fc] p-3">
+              <p className="text-[11px] font-black text-[#59667b]">시연용 샘플 문서</p>
+              <div className="mt-2 space-y-2">
+                {[
+                  { label: "냉동 닭가슴살 송장", fileName: "INV_001_냉동닭가슴살.pdf", path: "/samples/INV_001_냉동닭가슴살.pdf", type: "application/pdf" },
+                  { label: "생수 발주서", fileName: "PO_002_생수.png", path: "/samples/PO_002_생수.png", type: "image/png" },
+                ].map((sample) => (
+                  <div key={sample.fileName} className="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2">
+                    <div className="min-w-0"><p className="truncate text-[11px] font-black text-[#263248]">{sample.label}</p><a href={sample.path} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-brand-700">미리보기 ›</a></div>
+                    <button type="button" disabled={extractingDocument} onClick={() => void analyzeSampleDocument(sample.path, sample.fileName, sample.type)} className="shrink-0 rounded-lg bg-brand-700 px-3 py-2 text-[10px] font-black text-white disabled:opacity-50">이 샘플로 분석</button>
+                  </div>
+                ))}
+              </div>
+            </section>
             {documentResult && <p className="rounded-xl bg-emerald-50 p-3 text-xs font-bold leading-5 text-emerald-800">문서 분석 완료 · 필드 {documentResult.formFieldCount}개 · 표 {documentResult.tableCount}개<br />인식한 품목·중량·경로·화물가액을 위 입력칸에 채웠어요. 희망납품일은 출발일과 다를 수 있어 자동 적용하지 않아요.</p>}
           </div></details>
           {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p>}
