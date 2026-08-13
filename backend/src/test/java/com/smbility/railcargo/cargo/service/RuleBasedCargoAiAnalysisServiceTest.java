@@ -9,11 +9,14 @@ import com.smbility.railcargo.auth.domain.Member;
 import com.smbility.railcargo.auth.domain.MemberRole;
 import com.smbility.railcargo.cargo.domain.CargoOrder;
 import com.smbility.railcargo.cargo.domain.TemperatureCondition;
+import com.smbility.railcargo.cargo.document.CargoDocumentExtractionService;
+import com.smbility.railcargo.cargo.document.DocumentAiProperties;
 import com.smbility.railcargo.cargo.dto.CargoAiAnalysisResult;
 import com.smbility.railcargo.shipper.domain.Shipper;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockMultipartFile;
 
 class RuleBasedCargoAiAnalysisServiceTest {
 
@@ -131,6 +134,17 @@ class RuleBasedCargoAiAnalysisServiceTest {
     }
 
     @Test
+    void notion_03_영하18도이하를_냉동으로_해석한다() {
+        CargoAiAnalysisResult result = service.analyze(cargoOrder("냉동만두",
+                "냉동만두 800킬로 정도 운송하고 싶습니다. 계속 영하 18도 이하로 유지되어야 합니다. 20kg 박스 40개입니다."));
+
+        assertEquals(0, BigDecimal.valueOf(800).setScale(2).compareTo(result.weightKg()));
+        assertEquals(0, BigDecimal.valueOf(-18).compareTo(result.detectedTemperatureC()));
+        assertEquals(TemperatureCondition.FROZEN, result.temperatureCondition());
+        assertEquals("40BOX", result.packagingType());
+    }
+
+    @Test
     void notion_04_박스규격과_수량으로_부피를_계산한다() {
         CargoAiAnalysisResult result = service.analyze(cargoOrder("생활용품",
                 "생활용품 100박스입니다. 박스 하나당 60cm × 40cm × 40cm이고 총중량은 1,200kg입니다."));
@@ -194,6 +208,38 @@ class RuleBasedCargoAiAnalysisServiceTest {
     }
 
     @Test
+    void notion_12_서로다른_박스규격의_부피는_임의생성하지_않는다() {
+        CargoAiAnalysisResult result = service.analyze(cargoOrder("전자제품",
+                "전자제품 약 50박스 정도를 서울로 보내려고 합니다. 박스는 크기가 조금씩 다르고 총 무게는 700kg 정도입니다."));
+
+        assertEquals(0, BigDecimal.valueOf(700).setScale(2).compareTo(result.weightKg()));
+        assertEquals("50BOX", result.packagingType());
+        assertNull(result.volumeCbm());
+        assertTrue(result.lowConfidenceFields().contains("volumeCbm"));
+    }
+
+    @Test
+    void notion_13_pdf송장_추출결과를_화물조건으로_분석한다() {
+        CargoAiAnalysisResult result = analyzeDemoDocument(
+                "INV_001_냉동닭가슴살.pdf", "application/pdf", "%PDF-1.7".getBytes());
+
+        assertEquals(0, BigDecimal.valueOf(500).setScale(2).compareTo(result.weightKg()));
+        assertEquals(TemperatureCondition.FROZEN, result.temperatureCondition());
+        assertEquals(0, BigDecimal.valueOf(-18).compareTo(result.detectedTemperatureC()));
+        assertEquals("100BOX", result.packagingType());
+    }
+
+    @Test
+    void notion_14_png발주서_추출결과를_화물조건으로_분석한다() {
+        CargoAiAnalysisResult result = analyzeDemoDocument(
+                "PO_002_생수.png", "image/png", new byte[]{1, 2, 3});
+
+        assertEquals(0, BigDecimal.valueOf(1000).setScale(2).compareTo(result.weightKg()));
+        assertEquals(TemperatureCondition.ROOM, result.temperatureCondition());
+        assertEquals("1000BOX", result.packagingType());
+    }
+
+    @Test
     void notion_15_엑셀의_여러행을_품목별로_분리하고_합산한다() {
         CargoAiAnalysisResult result = service.analyze(cargoOrder("화물목록",
                 "[시트: 화물목록]\n품목\t중량\t온도\n사과\t300kg\t2℃\n생수\t500kg\t상온\n생활용품\t800kg\t상온"));
@@ -202,5 +248,12 @@ class RuleBasedCargoAiAnalysisServiceTest {
         assertTrue(result.detectedItems().contains("사과 300kg"));
         assertTrue(result.detectedItems().contains("생수 500kg"));
         assertTrue(result.detectedItems().contains("생활용품 800kg"));
+    }
+
+    private CargoAiAnalysisResult analyzeDemoDocument(String fileName, String contentType, byte[] bytes) {
+        CargoDocumentExtractionService documentService = new CargoDocumentExtractionService(
+                new DocumentAiProperties(false, "", "us", ""));
+        var extracted = documentService.extract(new MockMultipartFile("file", fileName, contentType, bytes));
+        return service.analyze(cargoOrder(fileName, extracted.extractedText()));
     }
 }

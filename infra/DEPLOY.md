@@ -49,7 +49,9 @@ nano .env   # 또는 vim
 
 1. Google Cloud에서 **Document AI API**를 활성화한다.
 2. Processor Gallery에서 **Form Parser** 프로세서를 만들고 프로젝트 ID·리전(`us` 또는 `eu`)·프로세서 ID를 `.env`에 입력한다.
-3. Document AI 호출 권한이 있는 전용 서비스 계정을 만들고 JSON 키를 내려받는다.
+3. `kolog-document-ai` 같은 전용 서비스 계정을 만들고 최소 권한인 **Document AI API User**
+   (`roles/documentai.apiUser`) 역할만 부여한 뒤 JSON 키를 내려받는다. 프로세서를 생성하는 사람 계정에는
+   관리자 권한이 필요할 수 있지만, 운영 앱 서비스 계정에는 프로세서 생성·삭제 권한을 주지 않는다.
 4. VM의 저장소에서 아래처럼 키를 배치한다. 이 디렉터리는 `.gitignore`에 포함되어 절대 Git에 올라가지 않는다.
 
 ```bash

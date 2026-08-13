@@ -26,7 +26,8 @@ public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
     private static final Pattern VOLUME_PATTERN = Pattern.compile("(\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)\\s*(cbm|m3|㎥)", Pattern.CASE_INSENSITIVE);
     private static final Pattern TEMPERATURE_PATTERN = Pattern.compile("(?:영하\\s*|-)?\\d+(?:\\.\\d+)?\\s*(?:도|℃)");
     private static final Pattern PALLET_PATTERN = Pattern.compile("(\\d+)\\s*(?:개|ea)?\\s*(?:팔레트|파렛트|pallet)|(?:팔레트|파렛트|pallet)\\s*(\\d+)\\s*(?:개|ea)?", Pattern.CASE_INSENSITIVE);
-    private static final Pattern BOX_PATTERN = Pattern.compile("(?:약\\s*)?(\\d+)\\s*(?:개\\s*)?(?:박스|box)|(?:박스|box)\\s*(?:약\\s*)?(\\d+)\\s*개?", Pattern.CASE_INSENSITIVE);
+    private static final String COUNT_NUMBER = "(?:\\d{1,3}(?:,\\d{3})+|\\d+)";
+    private static final Pattern BOX_PATTERN = Pattern.compile("(?:약\\s*)?(" + COUNT_NUMBER + ")\\s*(?:개\\s*)?(?:박스|box)|(?:박스|box)\\s*(?:약\\s*)?(" + COUNT_NUMBER + ")\\s*개?", Pattern.CASE_INSENSITIVE);
     private static final Pattern DIMENSION_PATTERN = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*cm\\s*[x×*]\\s*(\\d+(?:\\.\\d+)?)\\s*cm\\s*[x×*]\\s*(\\d+(?:\\.\\d+)?)\\s*cm", Pattern.CASE_INSENSITIVE);
     private static final Pattern ITEM_WEIGHT_PATTERN = Pattern.compile("([가-힣a-z][가-힣a-z ]{0,18}?)\\s*(\\d{1,3}(?:,\\d{3})+|\\d+)\\s*(kg|킬로그램|킬로|톤|t)", Pattern.CASE_INSENSITIVE);
 
@@ -204,7 +205,7 @@ public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
         }
         Matcher boxMatcher = BOX_PATTERN.matcher(text);
         if (boxMatcher.find()) {
-            String count = boxMatcher.group(1) != null ? boxMatcher.group(1) : boxMatcher.group(2);
+            String count = (boxMatcher.group(1) != null ? boxMatcher.group(1) : boxMatcher.group(2)).replace(",", "");
             String material = containsAny(text, "종이박스", "종이 박스") ? "종이박스" : "BOX";
             return count == null ? material : count + material;
         }

@@ -40,6 +40,42 @@ function toLocalDateValue(date = new Date()) {
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractLabeledValue(text: string, labels: string[]) {
+  const labelPattern = labels.map(escapeRegExp).join("|");
+  const match = text.match(new RegExp(`(?:^|\\n)\\s*(?:${labelPattern})\\s*[:：]?\\s*([^\\n|]+)`, "i"));
+  return match?.[1]?.trim();
+}
+
+function extractNumericValue(value: string | undefined) {
+  const match = value?.match(/\d[\d,]*(?:\.\d+)?/);
+  return match?.[0]?.replaceAll(",", "");
+}
+
+function extractDocumentSuggestions(text: string) {
+  const item = extractLabeledValue(text, ["품목", "품명", "상품명"]);
+  const labeledWeight = extractNumericValue(extractLabeledValue(text, ["총중량", "총 중량", "중량"]));
+  const weights = [...text.matchAll(/(\d[\d,]*(?:\.\d+)?)\s*(?:kg|킬로그램|킬로)\b/gi)]
+    .map((match) => Number(match[1].replaceAll(",", "")))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  const volume = extractNumericValue(extractLabeledValue(text, ["부피", "CBM"]));
+  const origin = extractLabeledValue(text, ["출발지", "상차지"]);
+  const destination = extractLabeledValue(text, ["도착지", "하차지"]);
+  const declaredValue = extractNumericValue(extractLabeledValue(text, ["화물가액", "화물 가액", "신고가액"]));
+
+  return {
+    item,
+    weightKg: labeledWeight ?? (weights.length > 0 ? String(weights.reduce((sum, value) => sum + value, 0)) : undefined),
+    volumeCbm: volume,
+    origin,
+    destination,
+    declaredValueKrw: declaredValue,
+  };
+}
+
 export function CargoRegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -124,7 +160,23 @@ export function CargoRegisterPage() {
         setError("문서에서 읽을 수 있는 내용을 찾지 못했어요. 스캔 품질을 확인해주세요.");
         return;
       }
+      const suggestions = extractDocumentSuggestions(result.extractedText);
       setRawInput((current) => [current, `첨부 문서(${file.name}) 추출 결과:\n${result.extractedText}`].filter(Boolean).join("\n\n"));
+      setStructured((current) => ({
+        ...current,
+        cargoName: suggestions.item ?? current.cargoName,
+        weightKg: suggestions.weightKg ?? current.weightKg,
+        volumeCbm: suggestions.volumeCbm ?? current.volumeCbm,
+      }));
+      if (suggestions.origin) {
+        setOriginStation(suggestions.origin);
+        void checkStation("origin", suggestions.origin);
+      }
+      if (suggestions.destination) {
+        setDestinationStation(suggestions.destination);
+        void checkStation("destination", suggestions.destination);
+      }
+      if (suggestions.declaredValueKrw) setDeclaredValueKrw(suggestions.declaredValueKrw);
       setInputMode("NATURAL");
       setAttachmentName(file.name);
       setDocumentResult(result);
@@ -181,7 +233,7 @@ export function CargoRegisterPage() {
         .join(". ");
       const cargoName = inputMode === "STRUCTURED"
         ? structured.cargoName.trim().slice(0, 50)
-        : rawInput.split(/[\d,.\n]/)[0]?.trim().slice(0, 50) || "화물";
+        : structured.cargoName.trim().slice(0, 50) || rawInput.split(/[\d,.\n]/)[0]?.trim().slice(0, 50) || "화물";
 
       const cargo = await registerCargo({
         cargoName,
@@ -266,7 +318,7 @@ export function CargoRegisterPage() {
           <details className="rounded-[18px] border border-[#e0e6f0]"><summary className="cursor-pointer px-4 py-3 text-[12px] font-black text-brand-700">문서·자연어·화물가액 추가 입력</summary><div className="space-y-3 border-t border-[#edf1f6] p-4">
             <TextArea rows={3} value={rawInput} onChange={(e) => { setRawInput(e.target.value); setInputMode(e.target.value ? "NATURAL" : "STRUCTURED"); }} placeholder="송장 내용이나 취급 요구사항을 자연어로 입력하세요." />
             <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-gray-300 px-4 py-3 text-sm font-semibold text-gray-600"><input type="file" accept=".pdf,.png,.jpg,.jpeg,.gif,.tif,.tiff,.bmp,.webp,.xls,.xlsx,.txt,.csv,.json,.xml,application/pdf,image/*" className="sr-only" disabled={extractingDocument} onChange={(e) => void handleDocumentAttachment(e.target.files?.[0])} />{extractingDocument ? "문서 분석 중…" : attachmentName ? `${attachmentName} 분석 완료` : "송장·발주서·엑셀·이미지 불러오기"}</label>
-            {documentResult && <p className="rounded-xl bg-emerald-50 p-3 text-xs font-bold text-emerald-800">문서 분석 완료 · 필드 {documentResult.formFieldCount}개 · 표 {documentResult.tableCount}개</p>}
+            {documentResult && <p className="rounded-xl bg-emerald-50 p-3 text-xs font-bold leading-5 text-emerald-800">문서 분석 완료 · 필드 {documentResult.formFieldCount}개 · 표 {documentResult.tableCount}개<br />인식한 품목·중량·경로·화물가액을 위 입력칸에 채웠어요. 희망납품일은 출발일과 다를 수 있어 자동 적용하지 않아요.</p>}
           </div></details>
           {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p>}
         </main>
