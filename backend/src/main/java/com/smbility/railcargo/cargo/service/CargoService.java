@@ -69,7 +69,7 @@ public class CargoService {
 
         notificationService.notify(cargoOrder.getShipper().getMember().getId(), NotificationType.ANALYSIS,
                 "AI 분석 완료", cargoOrder.getCargoName() + " 화물의 운송조건 분석이 완료됐어요. 결과를 확인해주세요.");
-        return CargoAnalysisResponse.of(CargoResponse.from(cargoOrder), result.lowConfidenceFields());
+        return CargoAnalysisResponse.of(CargoResponse.from(cargoOrder), result);
     }
 
     @Transactional

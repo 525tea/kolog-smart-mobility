@@ -53,11 +53,42 @@ class CargoDocumentExtractionServiceTest {
     }
 
     @Test
-    void requiresConfiguredGoogleDocumentAiForPdfAndImages() {
+    void requiresConfiguredGoogleDocumentAiForOrdinaryPdfAndImages() {
         var file = new MockMultipartFile("file", "송장.pdf", "application/pdf", "%PDF-1.7".getBytes());
 
         assertThatThrownBy(() -> service.extract(file))
                 .isInstanceOfSatisfying(BusinessException.class,
                         error -> assertThat(error.getErrorCode()).isEqualTo(ErrorCode.DOCUMENT_AI_UNAVAILABLE));
+    }
+
+    @Test
+    void extractsKnownDemoInvoiceWithoutGoogleCredentials() {
+        var file = new MockMultipartFile("file", "INV_001_냉동닭가슴살.pdf", "application/pdf", "%PDF-1.7".getBytes());
+
+        var result = service.extract(file);
+
+        assertThat(result.provider()).isEqualTo("DEMO_FIXTURE");
+        assertThat(result.extractedText())
+                .contains("냉동 닭가슴살")
+                .contains("500kg")
+                .contains("100BOX")
+                .contains("-18℃")
+                .contains("부산")
+                .contains("서울")
+                .contains("3,000,000원");
+    }
+
+    @Test
+    void extractsKnownDemoPurchaseOrderWithoutConfusingDeliveryDate() {
+        var file = new MockMultipartFile("file", "PO_002_생수.png", "image/png", new byte[]{1, 2, 3});
+
+        var result = service.extract(file);
+
+        assertThat(result.provider()).isEqualTo("DEMO_FIXTURE");
+        assertThat(result.extractedText())
+                .contains("생수")
+                .contains("1,000kg")
+                .contains("1,000BOX")
+                .contains("희망납품일: 9/2");
     }
 }

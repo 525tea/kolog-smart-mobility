@@ -81,7 +81,12 @@ public record CargoResponse(
     private static String hazardReason(CargoOrder order) {
         if (!order.isHazardous()) return null;
         if (order.isTransportRejected()) return "제1급 폭발물 가능성이 감지되어 철도 운송 접수가 차단되었습니다.";
-        return order.getHazardClassCode() + " " + order.getHazardClassName()
-                + " 가능성이 감지되어 20% 안전 할증과 MSDS 확인이 적용됩니다.";
+        String classification = java.util.stream.Stream.of(order.getHazardClassCode(), order.getHazardClassName())
+                .filter(value -> value != null && !value.isBlank())
+                .collect(java.util.stream.Collectors.joining(" "));
+        if (classification.isBlank()) {
+            return "위험 가능성이 감지되었지만 등급은 확정하지 않았습니다. MSDS의 운송 정보를 확인해주세요.";
+        }
+        return classification + " 가능성이 감지되어 20% 안전 할증과 MSDS 확인이 적용됩니다.";
     }
 }

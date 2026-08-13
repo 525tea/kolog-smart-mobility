@@ -9,9 +9,12 @@ import java.util.List;
  */
 public record CargoAnalysisResponse(
         CargoResponse cargo,
-        List<String> lowConfidenceFields
+        List<String> lowConfidenceFields,
+        List<String> detectedItems,
+        List<String> analysisWarnings
 ) {
-    public static CargoAnalysisResponse of(CargoResponse cargo, List<String> lowConfidenceFields) {
-        return new CargoAnalysisResponse(cargo, lowConfidenceFields);
+    public static CargoAnalysisResponse of(CargoResponse cargo, CargoAiAnalysisResult result) {
+        return new CargoAnalysisResponse(cargo, result.lowConfidenceFields(),
+                result.detectedItems(), result.analysisWarnings());
     }
 }

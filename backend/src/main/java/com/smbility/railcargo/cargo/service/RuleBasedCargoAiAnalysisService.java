@@ -22,10 +22,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
 
-    private static final Pattern WEIGHT_PATTERN = Pattern.compile("(\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)\\s*(kg|킬로그램|톤|t)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern WEIGHT_PATTERN = Pattern.compile("(\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)\\s*(kg|킬로그램|킬로|톤|t)", Pattern.CASE_INSENSITIVE);
     private static final Pattern VOLUME_PATTERN = Pattern.compile("(\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)\\s*(cbm|m3|㎥)", Pattern.CASE_INSENSITIVE);
     private static final Pattern TEMPERATURE_PATTERN = Pattern.compile("(?:영하\\s*|-)?\\d+(?:\\.\\d+)?\\s*(?:도|℃)");
     private static final Pattern PALLET_PATTERN = Pattern.compile("(\\d+)\\s*(?:개|ea)?\\s*(?:팔레트|파렛트|pallet)|(?:팔레트|파렛트|pallet)\\s*(\\d+)\\s*(?:개|ea)?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern BOX_PATTERN = Pattern.compile("(?:약\\s*)?(\\d+)\\s*(?:개\\s*)?(?:박스|box)|(?:박스|box)\\s*(?:약\\s*)?(\\d+)\\s*개?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern DIMENSION_PATTERN = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*cm\\s*[x×*]\\s*(\\d+(?:\\.\\d+)?)\\s*cm\\s*[x×*]\\s*(\\d+(?:\\.\\d+)?)\\s*cm", Pattern.CASE_INSENSITIVE);
+    private static final Pattern ITEM_WEIGHT_PATTERN = Pattern.compile("([가-힣a-z][가-힣a-z ]{0,18}?)\\s*(\\d{1,3}(?:,\\d{3})+|\\d+)\\s*(kg|킬로그램|킬로|톤|t)", Pattern.CASE_INSENSITIVE);
 
     private static final BigDecimal DEFAULT_WEIGHT_KG = BigDecimal.valueOf(50);
 
@@ -34,10 +37,10 @@ public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
         String text = normalize(cargoOrder.getCargoName(), cargoOrder.getRawInput());
 
         boolean weightFound = WEIGHT_PATTERN.matcher(text).find();
-        boolean volumeFound = VOLUME_PATTERN.matcher(text).find();
 
         BigDecimal weightKg = extractWeightKg(text).orElse(DEFAULT_WEIGHT_KG);
-        BigDecimal volumeCbm = extractVolumeCbm(text).orElse(null);
+        BigDecimal volumeCbm = extractVolumeCbm(text).orElseGet(() -> calculateBoxVolume(text));
+        boolean volumeFound = volumeCbm != null;
         BigDecimal detectedTemperature = extractTemperature(text);
         ColdChainResult coldChain = extractColdChain(text, detectedTemperature);
         TemperatureCondition temperatureCondition = coldChain.condition();
@@ -48,6 +51,8 @@ public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
         BigDecimal surchargeRate = hazard.surchargeRate().max(coldChain.surchargeRate()).max(specialCargo.maxRate());
         String packagingType = extractPackagingType(text);
         String handlingNote = extractHandlingNote(text, specialCargo.codes());
+        List<String> detectedItems = extractDetectedItems(normalize(null, cargoOrder.getRawInput()));
+        List<String> analysisWarnings = extractAnalysisWarnings(text, detectedTemperature, hazard, detectedItems);
 
         List<String> lowConfidenceFields = new ArrayList<>();
         if (!weightFound) {
@@ -60,11 +65,15 @@ public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
         if (hazardGradeGuessed) {
             lowConfidenceFields.add("hazardGrade");
         }
+        if (detectedTemperature == null && temperatureCondition != TemperatureCondition.ROOM
+                && containsAny(text, "신선", "너무 덥지", "저온")) {
+            lowConfidenceFields.add("temperatureCondition");
+        }
 
         return new CargoAiAnalysisResult(weightKg, volumeCbm, temperatureCondition, hazardous, hazardGrade,
                 hazard.classCode(), hazard.className(), hazard.rejected(), hazard.requiresMsds(),
                 surchargeRate, coldChain.fixedPowerFee(), detectedTemperature, specialCargo.codes(),
-                packagingType, handlingNote, lowConfidenceFields);
+                packagingType, handlingNote, lowConfidenceFields, detectedItems, analysisWarnings);
     }
 
     private String normalize(String cargoName, String rawInput) {
@@ -74,14 +83,22 @@ public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
 
     private java.util.Optional<BigDecimal> extractWeightKg(String text) {
         Matcher matcher = WEIGHT_PATTERN.matcher(text);
-        if (!matcher.find()) {
+        List<BigDecimal> weights = new ArrayList<>();
+        while (matcher.find()) {
+            BigDecimal value = new BigDecimal(matcher.group(1).replace(",", ""));
+            String unit = matcher.group(2);
+            if (unit.startsWith("톤") || unit.equalsIgnoreCase("t")) {
+                value = value.multiply(BigDecimal.valueOf(1000));
+            }
+            weights.add(value);
+        }
+        if (weights.isEmpty()) {
             return java.util.Optional.empty();
         }
-        BigDecimal value = new BigDecimal(matcher.group(1).replace(",", ""));
-        String unit = matcher.group(2);
-        if (unit.startsWith("톤") || unit.equalsIgnoreCase("t")) {
-            value = value.multiply(BigDecimal.valueOf(1000));
-        }
+        boolean multipleItems = text.contains("[시트:") || text.matches("(?s).*\\d+\\s*(?:kg|킬로그램)\\s*(?:과|와|,)\\s*.*\\d+\\s*(?:kg|킬로그램).*");
+        BigDecimal value = multipleItems
+                ? weights.stream().reduce(BigDecimal.ZERO, BigDecimal::add)
+                : weights.stream().max(BigDecimal::compareTo).orElseThrow();
         return java.util.Optional.of(value.setScale(2, RoundingMode.HALF_UP));
     }
 
@@ -91,6 +108,19 @@ public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
             return java.util.Optional.empty();
         }
         return java.util.Optional.of(new BigDecimal(matcher.group(1).replace(",", "")).setScale(3, RoundingMode.HALF_UP));
+    }
+
+    private BigDecimal calculateBoxVolume(String text) {
+        Matcher dimensions = DIMENSION_PATTERN.matcher(text);
+        Matcher boxes = BOX_PATTERN.matcher(text);
+        if (!dimensions.find() || !boxes.find()) return null;
+        BigDecimal width = new BigDecimal(dimensions.group(1));
+        BigDecimal depth = new BigDecimal(dimensions.group(2));
+        BigDecimal height = new BigDecimal(dimensions.group(3));
+        String countValue = boxes.group(1) != null ? boxes.group(1) : boxes.group(2);
+        BigDecimal count = new BigDecimal(countValue);
+        return width.multiply(depth).multiply(height).multiply(count)
+                .divide(BigDecimal.valueOf(1_000_000), 3, RoundingMode.HALF_UP);
     }
 
     private BigDecimal extractTemperature(String text) {
@@ -131,6 +161,9 @@ public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
         if (containsAny(text, "리튬 배터리", "리튬배터리", "전기자전거", "킥보드", "드라이아이스", "자석", "배터리", "전동", "스마트", "충전식", "위험물")) {
             return hazard("9급", "기타 위험물", HazardGrade.D, false);
         }
+        if (containsAny(text, "산업용 세정제", "산업용 화학제품", "화학제품")) {
+            return new HazardResult(true, null, null, HazardGrade.D, false, true, BigDecimal.valueOf(0.20));
+        }
         return new HazardResult(false, null, null, null, false, false, BigDecimal.ZERO);
     }
 
@@ -166,10 +199,58 @@ public class RuleBasedCargoAiAnalysisService implements CargoAiAnalysisService {
         if (containsAny(text, "컨테이너")) {
             return "컨테이너";
         }
-        if (containsAny(text, "박스", "상자")) {
-            return "박스";
+        if (containsAny(text, "종이박스", "종이 박스")) {
+            return "종이박스";
+        }
+        Matcher boxMatcher = BOX_PATTERN.matcher(text);
+        if (boxMatcher.find()) {
+            String count = boxMatcher.group(1) != null ? boxMatcher.group(1) : boxMatcher.group(2);
+            String material = containsAny(text, "종이박스", "종이 박스") ? "종이박스" : "BOX";
+            return count == null ? material : count + material;
         }
         return "박스";
+    }
+
+    private List<String> extractDetectedItems(String text) {
+        List<String> items = new ArrayList<>();
+        Matcher matcher = ITEM_WEIGHT_PATTERN.matcher(text);
+        while (matcher.find()) {
+            String name = matcher.group(1).trim()
+                    .replaceAll("^(?:그리고|첨부 문서.*?결과:|품목\\s*)", "")
+                    .replaceAll(".*[\\n\\t|]", "")
+                    .replaceAll("^(?:과|와)\\s+", "")
+                    .trim();
+            name = name.replaceFirst("^(.+?)\\s+\\1$", "$1");
+            if (name.length() < 2 || containsAny(name, "총중량", "중량", "무게", "박스")) continue;
+            BigDecimal weight = new BigDecimal(matcher.group(2).replace(",", ""));
+            if (matcher.group(3).startsWith("톤") || matcher.group(3).equalsIgnoreCase("t")) {
+                weight = weight.multiply(BigDecimal.valueOf(1000));
+            }
+            String item = name + " " + weight.stripTrailingZeros().toPlainString() + "kg";
+            if (!items.contains(item)) items.add(item);
+        }
+        return items.size() > 1 ? List.copyOf(items) : List.of();
+    }
+
+    private List<String> extractAnalysisWarnings(String text, BigDecimal temperature,
+                                                 HazardResult hazard, List<String> detectedItems) {
+        List<String> warnings = new ArrayList<>();
+        if (text.contains("화물유형: 일반화물") && containsAny(text, "냉동", "냉장", "신선")) {
+            warnings.add("선택한 일반화물과 분석된 냉동·신선 조건이 다릅니다. 화물 유형을 확인해주세요.");
+        }
+        if (temperature == null && containsAny(text, "신선", "너무 덥지")) {
+            warnings.add("구체적인 운송 온도가 없어 임의의 온도를 만들지 않았습니다. 적정 온도를 확인해주세요.");
+        }
+        if (hazard.detected() && hazard.classCode() == null) {
+            warnings.add("위험 가능성은 감지했지만 등급은 확정하지 않았습니다. 제품 MSDS의 운송 정보를 확인해주세요.");
+        }
+        if (containsAny(text, "대형 기계", "크기가 상당히 큰")) {
+            warnings.add("기계 규격·부피와 컨테이너 적합성을 확인한 뒤 철도 운송 가능 여부를 판단해야 합니다.");
+        }
+        if (detectedItems.size() > 1) {
+            warnings.add("복수 품목을 각각 분리해 감지했으며 총중량은 품목별 중량을 합산했습니다.");
+        }
+        return List.copyOf(warnings);
     }
 
     private String extractHandlingNote(String text, List<String> specialCodes) {

@@ -70,6 +70,10 @@ public class CargoDocumentExtractionService {
             if (extension.equals("txt") || extension.equals("csv") || extension.equals("json") || extension.equals("xml")) {
                 return extractText(file, fileName, mimeType);
             }
+            CargoDocumentExtractionResponse demoFixture = extractKnownDemoFixture(fileName, mimeType);
+            if (demoFixture != null && !properties.enabled()) {
+                return demoFixture;
+            }
             return extractWithGoogleDocumentAi(file, fileName, mimeType);
         } catch (BusinessException e) {
             throw e;
@@ -78,6 +82,26 @@ public class CargoDocumentExtractionService {
             throw new BusinessException(ErrorCode.DOCUMENT_PROCESSING_FAILED,
                     "문서를 읽지 못했습니다. 파일이 손상되지 않았는지 확인해주세요.");
         }
+    }
+
+    /**
+     * 시연 시나리오에서 사용하는 두 샘플 문서는 외부 OCR 자격증명이 없는 환경에서도 재현 가능해야 한다.
+     * 파일명까지 정확히 일치하는 경우에만 고정된 샘플 내용을 제공하고, 일반 문서는 기존 Document AI 경로를 유지한다.
+     */
+    private CargoDocumentExtractionResponse extractKnownDemoFixture(String fileName, String mimeType) {
+        String normalized = fileName.toLowerCase(Locale.ROOT);
+        String text;
+        if (normalized.equals("inv_001_냉동닭가슴살.pdf")) {
+            text = "송장번호: INV-001\n품목: 냉동 닭가슴살\n수량: 100BOX\n총중량: 500kg\n"
+                    + "보관 및 운송온도: -18℃\n출발지: 부산\n도착지: 서울\n화물가액: 3,000,000원";
+        } else if (normalized.equals("po_002_생수.png")) {
+            text = "발주번호: PO-002\n품목: 생수\n수량: 1,000BOX\n총중량: 1,000kg\n"
+                    + "온도조건: 상온\n출발지: 대전\n도착지: 부산\n희망납품일: 9/2\n화물가액: 12,000,000원";
+        } else {
+            return null;
+        }
+        return new CargoDocumentExtractionResponse(fileName, mimeType, "DEMO_FIXTURE", text,
+                1, 0, 0, List.of("시연용 샘플 문서 데이터가 적용되었습니다."));
     }
 
     private CargoDocumentExtractionResponse extractWithGoogleDocumentAi(

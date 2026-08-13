@@ -30,7 +30,9 @@ public record CargoAiAnalysisResult(
         List<String> detectedSpecialCargoCodes,
         String packagingType,
         String handlingNote,
-        List<String> lowConfidenceFields
+        List<String> lowConfidenceFields,
+        List<String> detectedItems,
+        List<String> analysisWarnings
 ) {
     public CargoAiAnalysisResult(BigDecimal weightKg, BigDecimal volumeCbm,
                                  TemperatureCondition temperatureCondition, boolean hazardous,
@@ -38,7 +40,7 @@ public record CargoAiAnalysisResult(
                                  List<String> lowConfidenceFields) {
         this(weightKg, volumeCbm, temperatureCondition, hazardous, hazardGrade,
                 null, null, false, false, BigDecimal.ZERO, BigDecimal.ZERO, null, List.of(),
-                packagingType, handlingNote, lowConfidenceFields);
+                packagingType, handlingNote, lowConfidenceFields, List.of(), List.of());
     }
 
     public boolean estimated() {

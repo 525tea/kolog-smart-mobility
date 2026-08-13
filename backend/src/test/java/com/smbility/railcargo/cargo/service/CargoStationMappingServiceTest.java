@@ -13,6 +13,7 @@ class CargoStationMappingServiceTest {
         assertThat(service.map("경기도 화성시 동탄").railStation()).isEqualTo("서화성역");
         assertThat(service.map("강원도 강릉시").railStation()).isEqualTo("안인역(강릉)");
         assertThat(service.map("광양시").mappedStationId()).isEqualTo("ST_GWANGYANG");
+        assertThat(service.map("경기").railStation()).isEqualTo("오봉역(의왕)");
     }
 
     @Test

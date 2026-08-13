@@ -46,6 +46,8 @@ public class GeminiResponseParser {
         String packagingType = readText(node, "packagingType");
         String handlingNote = readText(node, "handlingNote");
         List<String> lowConfidenceFields = readLowConfidenceFields(node);
+        List<String> detectedItems = readStringArray(node, "detectedItems");
+        List<String> analysisWarnings = readStringArray(node, "analysisWarnings");
 
         if (weightKg == null) {
             throw new IllegalArgumentException("Gemini 응답에 weightKg가 없습니다: " + rawJson);
@@ -55,7 +57,8 @@ public class GeminiResponseParser {
                 temperatureCondition, hazardous, hazardGrade, hazardClassCode, hazardClassName,
                 rejected, requiresMsds, surchargeRate == null ? BigDecimal.ZERO : surchargeRate,
                 fixedPowerFeeKrw == null ? BigDecimal.ZERO : fixedPowerFeeKrw, detectedTemperatureC,
-                detectedSpecialCargoCodes, packagingType, handlingNote, lowConfidenceFields);
+                detectedSpecialCargoCodes, packagingType, handlingNote, lowConfidenceFields,
+                detectedItems, analysisWarnings);
     }
 
     private HazardGrade readHazardGrade(JsonNode node) {

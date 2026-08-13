@@ -107,4 +107,100 @@ class RuleBasedCargoAiAnalysisServiceTest {
         assertTrue(result.handlingNote().contains("초과 중량"));
         assertTrue(result.handlingNote().contains("파손 주의"));
     }
+
+    @Test
+    void notion_01_부피는_만들지_않고_박스수를_추출한다() {
+        CargoAiAnalysisResult result = service.analyze(cargoOrder("즉석밥",
+                "즉석밥 500kg을 보내려고 합니다. 20kg씩 박스에 포장되어 있고 총 25박스입니다. 별도의 온도관리는 필요하지 않습니다."));
+
+        assertEquals(0, BigDecimal.valueOf(500).setScale(2).compareTo(result.weightKg()));
+        assertNull(result.volumeCbm());
+        assertEquals("25BOX", result.packagingType());
+        assertEquals(TemperatureCondition.ROOM, result.temperatureCondition());
+    }
+
+    @Test
+    void notion_02_온도와_종이박스를_추출한다() {
+        CargoAiAnalysisResult result = service.analyze(cargoOrder("사과",
+                "사과 300킬로를 보내야 합니다. 신선도 유지를 위해 2도 정도로 운송해주세요. 종이박스에 담겨 있습니다."));
+
+        assertEquals(0, BigDecimal.valueOf(300).setScale(2).compareTo(result.weightKg()));
+        assertEquals(0, BigDecimal.valueOf(2).compareTo(result.detectedTemperatureC()));
+        assertEquals(TemperatureCondition.REFRIGERATED, result.temperatureCondition());
+        assertEquals("종이박스", result.packagingType());
+    }
+
+    @Test
+    void notion_04_박스규격과_수량으로_부피를_계산한다() {
+        CargoAiAnalysisResult result = service.analyze(cargoOrder("생활용품",
+                "생활용품 100박스입니다. 박스 하나당 60cm × 40cm × 40cm이고 총중량은 1,200kg입니다."));
+
+        assertEquals(0, BigDecimal.valueOf(1200).setScale(2).compareTo(result.weightKg()));
+        assertEquals(0, BigDecimal.valueOf(9.6).setScale(3).compareTo(result.volumeCbm()));
+        assertEquals("100BOX", result.packagingType());
+        assertFalse(result.lowConfidenceFields().contains("volumeCbm"));
+    }
+
+    @Test
+    void notion_05_06_애매한_온도를_임의수치화하지_않는다() {
+        CargoAiAnalysisResult salmon = service.analyze(cargoOrder("연어", "냉장 연어 400kg입니다. 신선하게 운송해주세요."));
+        CargoAiAnalysisResult tangerine = service.analyze(cargoOrder("감귤", "감귤 250kg입니다. 너무 덥지 않게 신선하게 운송해주세요."));
+
+        assertNull(salmon.detectedTemperatureC());
+        assertNull(tangerine.detectedTemperatureC());
+        assertTrue(salmon.lowConfidenceFields().contains("temperatureCondition"));
+        assertTrue(tangerine.lowConfidenceFields().contains("temperatureCondition"));
+        assertTrue(tangerine.analysisWarnings().stream().anyMatch(message -> message.contains("임의의 온도")));
+    }
+
+    @Test
+    void notion_07_복수품목을_분리하고_중량을_합산한다() {
+        CargoAiAnalysisResult result = service.analyze(cargoOrder("냉동식품",
+                "냉동만두 300kg과 냉동볶음밥 200kg을 부산에서 서울로 보내려고 합니다. 두 제품 모두 영하 18도 이하로 유지해주세요."));
+
+        assertEquals(0, BigDecimal.valueOf(500).setScale(2).compareTo(result.weightKg()));
+        assertEquals(java.util.List.of("냉동만두 300kg", "냉동볶음밥 200kg"), result.detectedItems());
+    }
+
+    @Test
+    void notion_08_09_산업용화학제품은_msds를_요구하되_등급을_확정하지_않는다() {
+        for (String input : new String[]{"산업용 세정제 200kg", "산업용 화학제품 200kg, MSDS 보유"}) {
+            CargoAiAnalysisResult result = service.analyze(cargoOrder("산업용 제품", input));
+            assertTrue(result.hazardous());
+            assertTrue(result.requiresMsds());
+            assertNull(result.hazardClassCode());
+            assertTrue(result.lowConfidenceFields().contains("hazardGrade"));
+            assertTrue(result.analysisWarnings().stream().anyMatch(message -> message.contains("등급은 확정하지")));
+        }
+    }
+
+    @Test
+    void notion_10_사용자선택과_분석결과_불일치를_경고한다() {
+        CargoAiAnalysisResult result = service.analyze(cargoOrder("냉동만두",
+                "냉동만두 300kg, 영하 18도 이하. 화물유형: 일반화물"));
+
+        assertEquals(TemperatureCondition.FROZEN, result.temperatureCondition());
+        assertTrue(result.analysisWarnings().stream().anyMatch(message -> message.contains("다릅니다")));
+    }
+
+    @Test
+    void notion_11_대형기계는_규격없이_운송가능여부를_확정하지_않는다() {
+        CargoAiAnalysisResult result = service.analyze(cargoOrder("산업용 기계",
+                "공장용 대형 기계 1대, 무게는 15톤이고 크기가 상당히 큰 편입니다."));
+
+        assertEquals(0, BigDecimal.valueOf(15000).setScale(2).compareTo(result.weightKg()));
+        assertNull(result.volumeCbm());
+        assertTrue(result.analysisWarnings().stream().anyMatch(message -> message.contains("컨테이너 적합성")));
+    }
+
+    @Test
+    void notion_15_엑셀의_여러행을_품목별로_분리하고_합산한다() {
+        CargoAiAnalysisResult result = service.analyze(cargoOrder("화물목록",
+                "[시트: 화물목록]\n품목\t중량\t온도\n사과\t300kg\t2℃\n생수\t500kg\t상온\n생활용품\t800kg\t상온"));
+
+        assertEquals(0, BigDecimal.valueOf(1600).setScale(2).compareTo(result.weightKg()));
+        assertTrue(result.detectedItems().contains("사과 300kg"));
+        assertTrue(result.detectedItems().contains("생수 500kg"));
+        assertTrue(result.detectedItems().contains("생활용품 800kg"));
+    }
 }

@@ -31,6 +31,7 @@ public class CargoStationMappingService {
     );
 
     private static final List<StationRule> DIRECT = List.of(
+            rule("ST_OBONG", "오봉역(의왕)", "경기", "경기도"),
             rule("ST_OBONG", "의왕ICD", "의왕ICD"), rule("ST_OBONG", "오봉역", "오봉역"),
             rule("ST_BUKCHUL", "부산신항역", "부산신항역"), rule("ST_BUSANJIN", "부산진역", "부산진역"),
             rule("ST_ULSAN", "울산항역", "울산항역"), rule("ST_YEONGILMAN", "포항역", "포항역"),
