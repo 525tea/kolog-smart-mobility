@@ -215,5 +215,4 @@ KOLOG의 AI 기능은 화물 등록 편의성과 공동운송 후보 탐색을 �
 | --- | --- |
 | 서비스 데모 영상 | [DEMO_VIDEO_URL](https://www.youtube.com/watch?v=JW9CtSnmCE0&feature=youtu.be) |
 | 배포 서비스 | [DEPLOYED_APP_URL](https://kolog.net/) |
-| 결과보고서 PDF | [FINAL_REPORT_PDF_URL](https://drive.google.com/drive/shared-with-me?hl=ko) |
 
