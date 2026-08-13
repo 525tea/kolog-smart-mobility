@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Env files (실제 값은 커밋하지 않는다)
+.env
+infra/.env
+**/.env.local
+infra/secrets/*
+!infra/secrets/.gitkeep
+
+# Node (frontend 추가 시 사용)
+node_modules/
+dist/
+.next/
+
+# Logs
+*.log
