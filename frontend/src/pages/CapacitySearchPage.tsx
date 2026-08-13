@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { getUpcomingTrains } from "../api/train";
+import { getCargo } from "../api/cargo";
+import { getConsolidationDetail } from "../api/consolidation";
 import type { TrainResponse } from "../types";
 
 export function CapacitySearchPage() {
@@ -15,18 +17,31 @@ export function CapacitySearchPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    getUpcomingTrains()
-      .then((rows) => {
-        const sorted = [...rows].sort(
+    Promise.all([
+      getUpcomingTrains(),
+      cargoId ? getCargo(Number(cargoId)) : Promise.resolve(null),
+      groupId ? getConsolidationDetail(Number(groupId)) : Promise.resolve(null),
+    ])
+      .then(([trainRows, cargo, group]) => {
+        const sorted = [...trainRows].sort(
           (a, b) => +new Date(a.departureAt) - +new Date(b.departureAt),
         );
-        setTrains(sorted);
-        setSelectedDate(sorted[0] ? localDate(sorted[0].departureAt) : "");
-        setSelectedTrain(sorted[0]?.id ?? null);
+        const origin = cargo?.originStation ?? group?.originStation;
+        const destination = cargo?.destinationStation ?? group?.destinationStation;
+        const routeTrains = origin && destination
+          ? sorted.filter((row) => row.originStation === origin && row.destinationStation === destination)
+          : sorted;
+        const requestedDate = cargo?.desiredDate ?? group?.desiredDate;
+        const initialDate = requestedDate && routeTrains.some((row) => localDate(row.departureAt) === requestedDate)
+          ? requestedDate
+          : routeTrains[0] ? localDate(routeTrains[0].departureAt) : "";
+        setTrains(routeTrains);
+        setSelectedDate(initialDate);
+        setSelectedTrain(routeTrains.find((row) => localDate(row.departureAt) === initialDate)?.id ?? null);
       })
       .catch(() => setError("잔여용량 정보를 불러오지 못했어요."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [cargoId, groupId]);
   const dates = useMemo(
     () =>
       Array.from(
@@ -35,10 +50,7 @@ export function CapacitySearchPage() {
     [trains],
   );
   const dayTrains = trains.filter((row) => localDate(row.departureAt) === selectedDate);
-  const routeOrigin = dayTrains[0]?.originStation;
-  const routeDestination = dayTrains[0]?.destinationStation;
   const rows = dayTrains
-    .filter((row) => row.originStation === routeOrigin && row.destinationStation === routeDestination)
     .map((train) => {
       const wagon =
         train.wagons.find((row) => row.wagonType === "CONTAINER") ??
@@ -66,7 +78,14 @@ export function CapacitySearchPage() {
           <h1 className="text-[18px] font-black">철도 잔여용량</h1>
         </div>
         <div className="flex gap-2 overflow-x-auto px-5 pb-4 pt-2">
-          {dates.map((date, index) => (
+          {dates.map((date) => {
+            const dateRows = trains.filter((row) => localDate(row.departureAt) === date);
+            const availableTeu = dateRows.reduce((sum, train) => {
+              const wagon = train.wagons.find((row) => row.wagonType === "CONTAINER") ?? train.wagons[0];
+              if (!wagon) return sum;
+              return sum + Math.max(0, Math.round(67 * (wagon.remainingWeightKg / wagon.maxWeightKg)));
+            }, 0);
+            return (
             <button
               key={date}
               onClick={() => {
@@ -83,10 +102,11 @@ export function CapacitySearchPage() {
                 })}
               </span>
               <strong className="mt-1 block text-[17px]">
-                {index === 3 ? "운휴" : `${rows[index]?.teu ?? 0} TEU`}
+                {dateRows.length === 0 ? "운휴" : `${availableTeu} TEU`}
               </strong>
             </button>
-          ))}
+            );
+          })}
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
@@ -170,7 +190,7 @@ export function CapacitySearchPage() {
             fullWidth
             onClick={() =>
               navigate(
-                `/cargo/${cargoId}/mode-comparison${groupId ? `?groupId=${groupId}` : ""}`,
+                `/cargo/${cargoId}/mode-comparison?trainId=${chosen.train.id}${groupId ? `&groupId=${groupId}` : ""}`,
               )
             }
           >

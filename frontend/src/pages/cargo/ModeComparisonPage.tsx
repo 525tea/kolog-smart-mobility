@@ -4,18 +4,25 @@ import { Button } from "../../components/ui/Button";
 import { getCargo } from "../../api/cargo";
 import type { CargoResponse } from "../../types";
 import { ApiError } from "../../api/client";
+import { getUpcomingTrains } from "../../api/train";
+import type { TrainResponse } from "../../types";
 
 export function ModeComparisonPage() {
   const { cargoId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const groupId = searchParams.get("groupId");
+  const trainId = searchParams.get("trainId");
   const [cargo, setCargo] = useState<CargoResponse | null>(null);
+  const [train, setTrain] = useState<TrainResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (cargoId)
-      getCargo(Number(cargoId))
-        .then(setCargo)
+      Promise.all([getCargo(Number(cargoId)), getUpcomingTrains()])
+        .then(([cargoRow, trains]) => {
+          setCargo(cargoRow);
+          setTrain(trains.find((row) => row.id === Number(trainId)) ?? null);
+        })
         .catch((cause) =>
           setError(
             cause instanceof ApiError
@@ -23,7 +30,7 @@ export function ModeComparisonPage() {
               : "화물 정보를 불러오지 못했습니다.",
           ),
         );
-  }, [cargoId]);
+  }, [cargoId, trainId]);
   if (!cargo)
     return (
       <div className="p-8 text-center text-sm text-gray-400">
@@ -32,7 +39,7 @@ export function ModeComparisonPage() {
     );
 
   const weight = cargo.weightKg ?? 200;
-  const volume = cargo.volumeCbm ?? 18.6;
+  const volume = cargo.volumeCbm;
   const railCost = Math.round(
     weight * 500 * 0.65 * (1 + cargo.surchargeRate) +
       cargo.fixedPowerFeeKrw +
@@ -42,9 +49,13 @@ export function ModeComparisonPage() {
     98_000,
     Math.round(weight * 790 * (1 + cargo.surchargeRate)),
   );
-  const existingCbm = 41.5;
-  const coLoadCbm = Math.min(40.8, Math.max(volume, 1));
+  const wagon = train?.wagons.find((row) => row.wagonType === "CONTAINER") ?? train?.wagons[0];
+  const existingCbm = wagon ? 67 * (1 - wagon.remainingWeightKg / wagon.maxWeightKg) : 0;
+  const coLoadCbm = volume != null ? Math.min(40.8, Math.max(volume, 0)) : 0;
   const remainingCbm = Math.max(0, 67 - existingCbm - coLoadCbm);
+  const existingPercent = Math.round((existingCbm / 67) * 100);
+  const coLoadPercent = Math.round((coLoadCbm / 67) * 100);
+  const remainingPercent = Math.max(0, 100 - existingPercent - coLoadPercent);
   const railSaving = Math.max(
     0,
     Math.round(((roadCost - railCost) / roadCost) * 100),
@@ -60,19 +71,19 @@ export function ModeComparisonPage() {
           <h1 className="text-[18px] font-black">운송수단 비교</h1>
           <span className="ml-auto text-[10px] font-bold text-[#8190a6]">
             {cargo.originStation} → {cargo.destinationStation} ·{" "}
-            {volume.toFixed(1)} CBM
+            {volume != null ? `${volume.toFixed(1)} CBM` : "부피 확인 필요"}
           </span>
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-5">
         <section className="rounded-[26px] border border-[#dce3ee] bg-white p-5">
           <h2 className="text-[12px] font-black">
-            3061 화물열차 화차 잔여공간
+            {train?.trainNumber ?? "선택 열차"} 화물열차 화차 잔여공간
           </h2>
           <div
             className="relative mx-auto mt-4 size-[190px] rounded-full"
             style={{
-              background: `conic-gradient(#2460ee 0 62%, #12b3a6 62% 78%, #e8edf5 78% 100%)`,
+              background: `conic-gradient(#2460ee 0 ${existingPercent}%, #12b3a6 ${existingPercent}% ${existingPercent + coLoadPercent}%, #e8edf5 ${existingPercent + coLoadPercent}% 100%)`,
             }}
           >
             <div className="absolute inset-[28px] grid place-items-center rounded-full bg-white text-center">
@@ -81,10 +92,10 @@ export function ModeComparisonPage() {
                   잔여 화차공간
                 </p>
                 <strong className="block text-[24px] text-[#2c49bd]">
-                  {remainingCbm.toFixed(1)} CBM
+                  {volume != null ? `${remainingCbm.toFixed(1)} CBM` : "확인 필요"}
                 </strong>
                 <p className="text-[10px] font-black text-brand-700">
-                  전체의 22%
+                  {volume != null ? `전체의 ${remainingPercent}%` : "부피 입력 후 계산"}
                 </p>
               </div>
             </div>
@@ -93,17 +104,17 @@ export function ModeComparisonPage() {
             <Legend
               color="#2460ee"
               label="기존 적재 화물"
-              value={`${existingCbm.toFixed(1)} CBM · 62%`}
+              value={`${existingCbm.toFixed(1)} CBM · ${existingPercent}%`}
             />
             <Legend
               color="#12b3a6"
               label="내 공동화물"
-              value={`${coLoadCbm.toFixed(1)} CBM · 16%`}
+              value={volume != null ? `${coLoadCbm.toFixed(1)} CBM · ${coLoadPercent}%` : "부피 확인 필요"}
             />
             <Legend
               color="#e8edf5"
               label="잔여"
-              value={`${remainingCbm.toFixed(1)} CBM · 22%`}
+              value={volume != null ? `${remainingCbm.toFixed(1)} CBM · ${remainingPercent}%` : "부피 입력 후 계산"}
             />
           </div>
         </section>
@@ -160,7 +171,7 @@ export function ModeComparisonPage() {
           fullWidth
           onClick={() =>
             navigate(
-              `/cargo/${cargo.id}/mode-recommendation${groupId ? `?groupId=${groupId}` : ""}`,
+              `/cargo/${cargo.id}/mode-recommendation?${new URLSearchParams({ ...(groupId ? { groupId } : {}), ...(trainId ? { trainId } : {}) }).toString()}`,
             )
           }
         >

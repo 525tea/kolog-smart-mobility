@@ -34,6 +34,7 @@ export function ConsolidationDetailPage() {
       </div>
     );
   const cargoVolume = cargo?.volumeCbm ?? 0;
+  const hasKnownTotalVolume = cargo?.volumeCbm != null && detail.participants.every((row) => row.volumeCbm != null);
   const participantVolume = detail.participants.reduce(
     (sum, row) => sum + (row.volumeCbm ?? 0),
     0,
@@ -84,7 +85,7 @@ export function ConsolidationDetailPage() {
             <div>
               <p className="text-[10px] font-bold text-[#6f7c91]">총 CBM</p>
               <strong className="text-[22px] text-[#3049bd]">
-                {totalVolume.toFixed(1)}
+                {hasKnownTotalVolume ? totalVolume.toFixed(1) : "확인 필요"}
               </strong>
             </div>
             <div className="text-right">
@@ -122,8 +123,8 @@ export function ConsolidationDetailPage() {
               <CargoLine
                 name="추천 공동화물"
                 company="모집 후보"
-                volume={12.4}
-                weight={2800}
+                volume={null}
+                weight={detail.recruitedWeightKg}
               />
             )}
           </div>
@@ -133,7 +134,7 @@ export function ConsolidationDetailPage() {
           <PriceRow
             label="CBM 비중 기준"
             value={
-              totalVolume > 0
+              hasKnownTotalVolume && totalVolume > 0
                 ? `${Math.round((cargoVolume / totalVolume) * 100)}%`
                 : "확인 중"
             }

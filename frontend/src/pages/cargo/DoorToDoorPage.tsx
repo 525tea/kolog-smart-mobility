@@ -52,7 +52,7 @@ export function DoorToDoorPage() {
           <div className="rounded-[24px] border border-[#dce3ee] p-4">
             <div className="flex justify-between">
               <strong className="text-[12px]">
-                전남 광양시 항만로 21 · 1창고
+                {cargo.originStation} 인근 화주 지정 집하지
               </strong>
               <button className="text-[10px] font-black text-brand-700">
                 변경
@@ -72,7 +72,7 @@ export function DoorToDoorPage() {
               )}
             </div>
             <p className="mt-3 text-[10px] font-semibold text-[#8290a4]">
-              5톤 윙바디 · 냉장 차량 배정 · {group.originStation} 12:40 도착
+              5톤 윙바디 · {cargo.temperatureCondition === "FROZEN" ? "냉동" : cargo.temperatureCondition === "REFRIGERATED" ? "냉장" : "일반"} 차량 배정 · {group.originStation} 12:40 도착
               예정
             </p>
           </div>
@@ -83,8 +83,8 @@ export function DoorToDoorPage() {
           </h2>
           <Choice
             active={last}
-            title={`${group.destinationStation} → 안양 물류센터`}
-            detail="도착 당일 23:30 배송 · 68,000원"
+            title={`${group.destinationStation} → 최종 배송지`}
+            detail="도착 당일 배송 · 19,000원"
             onClick={() => setLast(true)}
           />
           <Choice
@@ -96,8 +96,8 @@ export function DoorToDoorPage() {
         </section>
         <section className="rounded-[22px] bg-[#f3f6fb] p-4">
           <p className="text-[11px] font-black">연계 구간 합계</p>
-          <Line label="집하" value={first ? "92,000원" : "0원"} />
-          <Line label="라스트마일" value={last ? "68,000원" : "0원"} />
+          <Line label="집하" value={first ? "24,000원" : "0원"} />
+          <Line label="라스트마일" value={last ? "19,000원" : "0원"} />
         </section>
       </main>
       <footer className="border-t border-[#e7ecf4] px-5 pb-7 pt-4">

@@ -132,7 +132,7 @@ public class CargoService {
 
     public List<CargoResponse> getMyCargoOrders(Long memberId) {
         Shipper shipper = shipperService.getEntityByMemberId(memberId);
-        return cargoOrderRepository.findAllByShipperId(shipper.getId()).stream()
+        return cargoOrderRepository.findAllByShipperIdOrderByIdDesc(shipper.getId()).stream()
                 .map(CargoResponse::from)
                 .toList();
     }

@@ -45,6 +45,7 @@ export function CargoRecommendationsPage() {
   const totalCbm =
     (cargo?.volumeCbm ?? 0) +
     selected.reduce((sum, row) => sum + row.recruitedWeightKg / 250, 0);
+  const hasKnownTotalCbm = cargo?.volumeCbm != null;
   const capacity = getRuntimeConfig()?.containerCapacityCbm ?? 67;
   const best = selected[0] ?? candidates[0];
   const savingsPercent = best ? Math.round(best.appliedDiscountRate * 100) : 0;
@@ -90,19 +91,21 @@ export function CargoRecommendationsPage() {
             <span className="text-[11px] font-bold text-white/65">
               선택 화물 합계
             </span>
-            <strong className="text-[25px]">{totalCbm.toFixed(1)} CBM</strong>
+            <strong className="text-[25px]">
+              {hasKnownTotalCbm ? `${totalCbm.toFixed(1)} CBM` : "부피 확인 필요"}
+            </strong>
           </div>
           <div className="mt-3 h-2 rounded-full bg-white/20">
             <div
               className="h-full rounded-full bg-white"
               style={{
-                width: `${Math.min(100, (totalCbm / capacity) * 100)}%`,
+                width: `${hasKnownTotalCbm ? Math.min(100, (totalCbm / capacity) * 100) : 0}%`,
               }}
             />
           </div>
           <div className="mt-2 flex justify-between text-[10px] text-white/70">
             <span>40ft 컨테이너 기준 {capacity} CBM</span>
-            <span>{Math.round((totalCbm / capacity) * 100)}% 적재</span>
+            <span>{hasKnownTotalCbm ? `${Math.round((totalCbm / capacity) * 100)}% 적재` : "부피 입력 후 계산"}</span>
           </div>
         </section>
         {loading && (

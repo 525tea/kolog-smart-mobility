@@ -99,14 +99,16 @@ export function ReservationConfirmPage() {
           />
           <Line
             label="공동운송"
-            value={`${group.participantCount + 1}건 · ${(cargo.volumeCbm ?? 0).toFixed(1)} CBM`}
+            value={`${group.participantCount + 1}건 · ${cargo.volumeCbm != null ? `${cargo.volumeCbm.toFixed(1)} CBM` : "부피 확인 필요"}`}
           />
           <Line
             label="운송조건"
             value={
               cargo.temperatureCondition === "FROZEN"
-                ? "냉장 -1~5℃ · 파손주의"
-                : "일반 운송"
+                ? "냉동 -18℃ 이하"
+                : cargo.temperatureCondition === "REFRIGERATED"
+                  ? "냉장 0~8℃"
+                  : "일반 운송"
             }
           />
           <Line

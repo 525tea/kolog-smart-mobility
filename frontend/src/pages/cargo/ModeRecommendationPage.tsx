@@ -3,18 +3,25 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { getCargo } from "../../api/cargo";
 import type { CargoResponse } from "../../types";
 import { ApiError } from "../../api/client";
+import { getUpcomingTrains } from "../../api/train";
+import type { TrainResponse } from "../../types";
 
 export function ModeRecommendationPage() {
   const { cargoId } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const groupId = params.get("groupId");
+  const trainId = params.get("trainId");
   const [cargo, setCargo] = useState<CargoResponse | null>(null);
+  const [train, setTrain] = useState<TrainResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (cargoId)
-      getCargo(Number(cargoId))
-        .then(setCargo)
+      Promise.all([getCargo(Number(cargoId)), getUpcomingTrains()])
+        .then(([cargoRow, trains]) => {
+          setCargo(cargoRow);
+          setTrain(trains.find((row) => row.id === Number(trainId)) ?? null);
+        })
         .catch((cause) =>
           setError(
             cause instanceof ApiError
@@ -22,7 +29,7 @@ export function ModeRecommendationPage() {
               : "화물 정보를 불러오지 못했습니다.",
           ),
         );
-  }, [cargoId]);
+  }, [cargoId, trainId]);
   if (!cargo)
     return (
       <div className="grid min-h-full place-items-center text-sm text-gray-400">
@@ -59,7 +66,7 @@ export function ModeRecommendationPage() {
                 추천 운송수단
               </p>
               <h3 className="mt-2 text-[20px] font-black">
-                철도 공동운송 · 3061 화물열차
+                철도 공동운송 · {train?.trainNumber ?? "선택 열차"} 화물열차
               </h3>
             </div>
             <span className="h-fit rounded-full bg-[#eeeafd] px-3 py-1 text-[9px] font-black text-[#624ed8]">
@@ -76,7 +83,7 @@ export function ModeRecommendationPage() {
               label="조건"
               value={
                 cargo.temperatureCondition === "FROZEN"
-                  ? "냉장 가능"
+                  ? "냉동 가능"
                   : "조건 충족"
               }
             />
@@ -88,8 +95,8 @@ export function ModeRecommendationPage() {
           </h3>
           <div className="rounded-[24px] border border-white/25 bg-white/10 p-4 text-[11px] font-semibold leading-7 text-white/85">
             <p>● 희망일 기준 화차 잔여공간 확보</p>
-            <p>● 공동운송 매칭으로 CBM 단가 절감</p>
-            <p>● 요청 운송조건을 만족하는 냉장 컨테이너 편성</p>
+            <p>● 공동운송 매칭으로 운임 절감</p>
+            <p>● 요청 운송조건을 만족하는 {cargo.temperatureCondition === "FROZEN" ? "냉동" : cargo.temperatureCondition === "REFRIGERATED" ? "냉장" : "일반"} 컨테이너 편성</p>
           </div>
         </section>
         <button className="flex items-center rounded-[22px] border border-white/25 bg-white/10 p-4 text-left">

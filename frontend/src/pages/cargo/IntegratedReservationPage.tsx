@@ -32,10 +32,12 @@ export function IntegratedReservationPage() {
   }, [cargoId, groupId]);
   if (!cargo || !group) return <div />;
   const rail = Math.round(quote?.totalPayableKrw ?? (cargo.weightKg ?? 0) * 500 * 0.77);
-  const link = first ? 92000 : 0;
-  const end = last ? 68000 : 0;
-  const discount = Math.round((link + end) * 0.725);
-  const total = rail + link + end - discount;
+  const link = first ? 24000 : 0;
+  const end = last ? 19000 : 0;
+  const discount = Math.round(quote?.estimatedSavingsForOrder ?? 0);
+  const total = rail + link + end;
+  const displayDate = new Date(`${cargo.desiredDate}T00:00:00`).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
+  const vehicle = cargo.temperatureCondition === "FROZEN" ? "냉동" : cargo.temperatureCondition === "REFRIGERATED" ? "냉장" : "일반";
   return (
     <div className="flex min-h-full flex-col bg-[#5a49d5] text-white">
       <header className="flex h-[72px] items-center gap-3 px-5 pt-3">
@@ -49,18 +51,18 @@ export function IntegratedReservationPage() {
         </h2>
         <section className="rounded-[28px] border border-white/25 bg-white/10 p-5">
           <Timeline
-            time="08/20 10:00 · 집하"
-            title={`광양 항만로 창고 → ${group.originStation}`}
-            detail="5톤 냉장 윙바디 · 92,000원"
+            time={`${displayDate} 10:00 · 집하`}
+            title={`${cargo.originStation} 인근 집하지 → ${group.originStation}`}
+            detail={`5톤 ${vehicle} 윙바디 · ${link.toLocaleString()}원`}
           />
           <Timeline
-            time="08/20 14:20 · 철도"
+            time={`${displayDate} ${quote ? new Date(quote.departureAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) : "시간 확인"} · 철도`}
             title={`${quote?.trainNumber ?? "3061"} 화물열차 · 공동운송 ${group.participantCount + 1}건`}
             detail={`${group.originStation} → ${group.destinationStation} · ${rail.toLocaleString()}원`}
           />
           <Timeline
-            time="08/20 22:30 · 라스트마일"
-            title={`${group.destinationStation} → 안양 물류센터`}
+            time={`${displayDate} 도착 후 · 라스트마일`}
+            title={`${group.destinationStation} → 최종 배송지`}
             detail={`당일 배송 · ${end.toLocaleString()}원`}
             last
           />
@@ -68,11 +70,7 @@ export function IntegratedReservationPage() {
         <section className="rounded-[28px] bg-white p-5 text-[#182237]">
           <Line label="철도 운임" value={`${rail.toLocaleString()}원`} />
           <Line label="연계운송" value={`${(link + end).toLocaleString()}원`} />
-          <Line
-            label="공동운송 할인"
-            value={`-${discount.toLocaleString()}원`}
-            blue
-          />
+          {discount > 0 && <Line label="공동운송 절감액" value={`-${discount.toLocaleString()}원`} blue />}
           <div className="mt-4 flex items-end justify-between border-t border-[#e7ecf4] pt-4">
             <strong>총 결제 예정</strong>
             <strong className="text-[26px] text-[#604ed8]">
