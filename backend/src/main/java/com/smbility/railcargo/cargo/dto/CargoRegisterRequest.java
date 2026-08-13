@@ -1,8 +1,11 @@
 package com.smbility.railcargo.cargo.dto;
 
+import com.smbility.railcargo.cargo.domain.ServiceMode;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -24,6 +27,13 @@ public record CargoRegisterRequest(
         String destinationStation,
 
         @NotNull @FutureOrPresent
-        LocalDate desiredDate
+        LocalDate desiredDate,
+
+        @NotNull
+        ServiceMode serviceMode,
+
+        /** 화물가액(원). 선택 입력. 입력하면 적재보험료 산정에 쓰인다 (미입력 시 보험료 0원). */
+        @PositiveOrZero
+        BigDecimal declaredValueKrw
 ) {
 }

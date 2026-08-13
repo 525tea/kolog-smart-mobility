@@ -1,5 +1,6 @@
 package com.smbility.railcargo.cargo.dto;
 
+import com.smbility.railcargo.cargo.domain.HazardGrade;
 import com.smbility.railcargo.cargo.domain.TemperatureCondition;
 import java.math.BigDecimal;
 
@@ -9,6 +10,7 @@ public record CargoCorrectionRequest(
         BigDecimal volumeCbm,
         TemperatureCondition temperatureCondition,
         Boolean hazardous,
+        HazardGrade hazardGrade,
         String packagingType,
         String handlingNote
 ) {

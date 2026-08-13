@@ -1,7 +1,6 @@
 package com.smbility.railcargo.cargo.controller;
 
 import com.smbility.railcargo.auth.jwt.LoginMember;
-import com.smbility.railcargo.cargo.document.CargoDocumentExtractionService;
 import com.smbility.railcargo.cargo.dto.CargoAnalysisResponse;
 import com.smbility.railcargo.cargo.dto.CargoCorrectionRequest;
 import com.smbility.railcargo.cargo.dto.CargoDocumentExtractionResponse;
@@ -9,6 +8,7 @@ import com.smbility.railcargo.cargo.dto.CargoRegisterRequest;
 import com.smbility.railcargo.cargo.dto.CargoResponse;
 import com.smbility.railcargo.cargo.dto.StationMappingResponse;
 import com.smbility.railcargo.cargo.service.CargoService;
+import com.smbility.railcargo.cargo.document.CargoDocumentExtractionService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -45,21 +45,37 @@ public class CargoController {
     }
 
     @PostMapping("/{cargoOrderId}/ai-analysis")
-    public ResponseEntity<CargoAnalysisResponse> runAiAnalysis(@PathVariable Long cargoOrderId) {
-        return ResponseEntity.ok(cargoService.runAiAnalysis(cargoOrderId));
+    public ResponseEntity<CargoAnalysisResponse> runAiAnalysis(
+            @AuthenticationPrincipal LoginMember loginMember,
+            @PathVariable Long cargoOrderId
+    ) {
+        return ResponseEntity.ok(cargoService.runAiAnalysis(loginMember.memberId(), cargoOrderId));
+    }
+
+    @PostMapping("/{cargoOrderId}/msds")
+    public ResponseEntity<CargoResponse> attachMsds(
+            @AuthenticationPrincipal LoginMember loginMember,
+            @PathVariable Long cargoOrderId,
+            @RequestPart("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(cargoService.attachMsds(loginMember.memberId(), cargoOrderId, file));
     }
 
     @PatchMapping("/{cargoOrderId}")
     public ResponseEntity<CargoResponse> correct(
+            @AuthenticationPrincipal LoginMember loginMember,
             @PathVariable Long cargoOrderId,
             @RequestBody CargoCorrectionRequest request
     ) {
-        return ResponseEntity.ok(cargoService.correct(cargoOrderId, request));
+        return ResponseEntity.ok(cargoService.correct(loginMember.memberId(), cargoOrderId, request));
     }
 
     @GetMapping("/{cargoOrderId}")
-    public ResponseEntity<CargoResponse> getCargo(@PathVariable Long cargoOrderId) {
-        return ResponseEntity.ok(cargoService.getCargo(cargoOrderId));
+    public ResponseEntity<CargoResponse> getCargo(
+            @AuthenticationPrincipal LoginMember loginMember,
+            @PathVariable Long cargoOrderId
+    ) {
+        return ResponseEntity.ok(cargoService.getCargo(loginMember.memberId(), cargoOrderId));
     }
 
     @GetMapping("/me")

@@ -32,12 +32,27 @@ public class GeminiCargoAiAnalysisService implements CargoAiAnalysisService {
             {
               "weightKg": number,               // 총 중량(kg). 명시가 없으면 화물 종류로 보수적으로 추정
               "volumeCbm": number | null,        // 부피(m3). 명시가 없으면 null
-              "temperatureCondition": "ROOM" | "REFRIGERATED" | "FROZEN",
-              "hazardous": boolean,              // 위험물 여부
+              "temperatureCondition": "ROOM" | "CONSTANT" | "REFRIGERATED" | "FROZEN",
+              "hazardous": boolean,
+              "hazardGrade": "A" | "B" | "C" | "D" | null,
+              "hazardClassCode": "1급" | "2급" | "3급" | "4급" | "5급" | "6급" | "7급" | "8급" | "9급" | null,
+              "hazardClassName": string | null,
+              "rejected": boolean,               // 1급 폭발물만 true
+              "requiresMsds": boolean,
+              "surchargeRate": number,            // 0.20처럼 소수. 위험물/콜드체인/특수화물 중 최고 요율 하나
+              "fixedPowerFeeKrw": number,         // 냉동 50000, 냉장 40000, 정온 30000, 일반 0
+              "detectedTemperatureC": number | null,
+              "detectedSpecialCargoCodes": string[], // OVERWEIGHT, FRAGILE, ODOROUS, LIQUID_BULK
               "packagingType": string,           // 예: 박스, 팔레트, 컨테이너
               "handlingNote": string | null,     // 파손주의 등 취급 유의사항, 없으면 null
               "lowConfidenceFields": string[]    // 텍스트에 명시되지 않아 추정한 필드명 목록 (예: ["weightKg"])
             }
+
+            위험물은 1~9급으로 분류하고 1급은 rejected=true로 운송을 차단한다. 2~9급 위험물은 20%% 할증이다.
+            화물명에 전동, 스마트, 캠핑, 소독 같은 단어가 있으면 배터리·가스·산화성 물질 등 내장 위험을 추론하라.
+            콜드체인은 냉동 30%%+50000원, 냉장 20%%+40000원, 정온 15%%+30000원이다.
+            특수화물은 OVERWEIGHT 20%%, FRAGILE 10%%, ODOROUS 20%%, LIQUID_BULK 15%%다.
+            여러 할증 조건이 겹치면 surchargeRate에는 가장 높은 비율 하나만 넣고 전력비는 별도로 넣어라.
             """;
 
     private final GeminiClient geminiClient;

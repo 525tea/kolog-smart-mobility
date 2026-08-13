@@ -2,6 +2,7 @@ package com.smbility.railcargo.cargo.ai;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.smbility.railcargo.cargo.domain.HazardGrade;
 import com.smbility.railcargo.cargo.domain.TemperatureCondition;
 import com.smbility.railcargo.cargo.dto.CargoAiAnalysisResult;
 import java.math.BigDecimal;
@@ -33,6 +34,15 @@ public class GeminiResponseParser {
         BigDecimal volumeCbm = readDecimal(node, "volumeCbm");
         TemperatureCondition temperatureCondition = readTemperatureCondition(node);
         boolean hazardous = node.path("hazardous").asBoolean(false);
+        HazardGrade hazardGrade = hazardous ? readHazardGrade(node) : null;
+        String hazardClassCode = readText(node, "hazardClassCode");
+        String hazardClassName = readText(node, "hazardClassName");
+        boolean rejected = node.path("rejected").asBoolean(false);
+        boolean requiresMsds = node.path("requiresMsds").asBoolean(false);
+        BigDecimal surchargeRate = readDecimal(node, "surchargeRate");
+        BigDecimal fixedPowerFeeKrw = readDecimal(node, "fixedPowerFeeKrw");
+        BigDecimal detectedTemperatureC = readDecimal(node, "detectedTemperatureC");
+        List<String> detectedSpecialCargoCodes = readStringArray(node, "detectedSpecialCargoCodes");
         String packagingType = readText(node, "packagingType");
         String handlingNote = readText(node, "handlingNote");
         List<String> lowConfidenceFields = readLowConfidenceFields(node);
@@ -42,7 +52,22 @@ public class GeminiResponseParser {
         }
 
         return new CargoAiAnalysisResult(weightKg, volumeCbm,
-                temperatureCondition, hazardous, packagingType, handlingNote, lowConfidenceFields);
+                temperatureCondition, hazardous, hazardGrade, hazardClassCode, hazardClassName,
+                rejected, requiresMsds, surchargeRate == null ? BigDecimal.ZERO : surchargeRate,
+                fixedPowerFeeKrw == null ? BigDecimal.ZERO : fixedPowerFeeKrw, detectedTemperatureC,
+                detectedSpecialCargoCodes, packagingType, handlingNote, lowConfidenceFields);
+    }
+
+    private HazardGrade readHazardGrade(JsonNode node) {
+        String raw = readText(node, "hazardGrade");
+        if (raw == null) {
+            return HazardGrade.D;
+        }
+        try {
+            return HazardGrade.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return HazardGrade.D;
+        }
     }
 
     private BigDecimal readDecimal(JsonNode node, String field) {
@@ -74,8 +99,12 @@ public class GeminiResponseParser {
     }
 
     private List<String> readLowConfidenceFields(JsonNode node) {
+        return readStringArray(node, "lowConfidenceFields");
+    }
+
+    private List<String> readStringArray(JsonNode node, String field) {
         List<String> fields = new ArrayList<>();
-        JsonNode array = node.path("lowConfidenceFields");
+        JsonNode array = node.path(field);
         if (array.isArray()) {
             array.forEach(item -> fields.add(item.asText()));
         }

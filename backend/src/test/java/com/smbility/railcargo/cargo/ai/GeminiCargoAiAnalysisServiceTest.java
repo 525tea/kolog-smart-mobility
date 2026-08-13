@@ -41,7 +41,7 @@ class GeminiCargoAiAnalysisServiceTest {
     void 정상_호출시_파싱된_결과를_그대로_반환한다() {
         GeminiCargoAiAnalysisService service = new GeminiCargoAiAnalysisService(geminiClient, responseParser, fallback);
         CargoAiAnalysisResult expected = new CargoAiAnalysisResult(BigDecimal.valueOf(300), BigDecimal.valueOf(1),
-                TemperatureCondition.FROZEN, false, "박스", null, List.of());
+                TemperatureCondition.FROZEN, false, null, "박스", null, List.of());
 
         when(geminiClient.generateJson(anyString())).thenReturn("{...}");
         when(responseParser.parse("{...}")).thenReturn(expected);
