@@ -43,7 +43,7 @@ export function Pill({
   return (
     <span
       className={classes(
-        'px-[11px] py-[5px] rounded-full text-[10.5px] font-extrabold whitespace-nowrap',
+        'px-[11px] py-[5px] rounded-full text-[11.5px] font-extrabold whitespace-nowrap',
         solid ? solidBg : TONE[tone],
         pulse && 'animate-goldPulse',
       )}
@@ -166,7 +166,7 @@ export function SelectRow({
       </div>
       <div className="flex-1 flex flex-col gap-[2px] min-w-0">
         <span className="text-[13.5px] font-extrabold text-ink">{title}</span>
-        <span className="text-[11px] font-semibold text-ink-muted truncate">{detail}</span>
+        <span className="text-[12px] font-semibold text-ink-muted truncate">{detail}</span>
       </div>
       <div
         className={classes(

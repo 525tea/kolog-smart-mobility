@@ -62,6 +62,8 @@ export function CargoRegisterPage() {
     packageUnit: "파렛트",
     handlingNote: "",
   });
+  const [showVolumeCalculator, setShowVolumeCalculator] = useState(false);
+  const [dimensions, setDimensions] = useState({ widthCm: "", depthCm: "", heightCm: "", count: "" });
   const [declaredValueKrw, setDeclaredValueKrw] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -76,6 +78,10 @@ export function CargoRegisterPage() {
     try {
       const result = await previewStationMapping(location);
       setOutOfCoverage((current) => ({ ...current, [kind]: result.outOfCoverage }));
+      if (result.mapped && result.railStation) {
+        if (kind === "origin") setOriginStation(result.railStation);
+        else setDestinationStation(result.railStation);
+      }
       setMappingHint((current) => ({
         ...current,
         [kind]: result.outOfCoverage
@@ -187,6 +193,22 @@ export function CargoRegisterPage() {
 
   const nextDate = (() => { const date = new Date(`${desiredDate}T12:00:00`); date.setDate(date.getDate() + 1); return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-"); })();
 
+  function calculateVolume() {
+    const width = Number(dimensions.widthCm);
+    const depth = Number(dimensions.depthCm);
+    const height = Number(dimensions.heightCm);
+    const count = Number(dimensions.count);
+    if (![width, depth, height, count].every((value) => Number.isFinite(value) && value > 0)) {
+      setError("가로·세로·높이와 수량을 모두 0보다 크게 입력해주세요.");
+      return;
+    }
+    const cbm = (width * depth * height * count) / 1_000_000;
+    const value = cbm.toFixed(3).replace(/\.?0+$/, "");
+    setStructured((current) => ({ ...current, volumeCbm: value, packageCount: dimensions.count, packageUnit: "박스" }));
+    setError(null);
+    setShowVolumeCalculator(false);
+  }
+
   return (
     <div className="flex min-h-full flex-col bg-white">
       <CargoWizardHeader step="register" onBack={() => navigate("/cargo/new")} />
@@ -203,6 +225,19 @@ export function CargoRegisterPage() {
             <DesignField label="중량 (kg)"><input aria-label="중량 (kg)" type="number" min={0.1} step="0.1" value={structured.weightKg} onChange={(e) => setStructured((s) => ({ ...s, weightKg: e.target.value }))} required className="design-input" placeholder="4,200" /></DesignField>
             <DesignField label="CBM"><input aria-label="CBM" type="number" min={0} step="0.1" value={structured.volumeCbm} onChange={(e) => setStructured((s) => ({ ...s, volumeCbm: e.target.value }))} className="design-input" placeholder="18.6" /></DesignField>
           </div>
+          <button type="button" onClick={() => setShowVolumeCalculator((open) => !open)} className="-mt-3 self-end text-[12px] font-black text-brand-700">{showVolumeCalculator ? "부피 계산기 닫기" : "박스 규격으로 CBM 계산 ›"}</button>
+          {showVolumeCalculator && (
+            <section className="-mt-2 rounded-[18px] border border-brand-100 bg-brand-50 p-4">
+              <div className="mb-3 flex items-center justify-between"><h3 className="text-[14px] font-black text-[#182237]">부피 계산기</h3><span className="text-[12px] font-bold text-[#68758b]">cm 기준</span></div>
+              <div className="grid grid-cols-4 gap-2">
+                {([['widthCm', '가로'], ['depthCm', '세로'], ['heightCm', '높이'], ['count', '수량']] as const).map(([key, label]) => (
+                  <label key={key}><span className="mb-1 block text-center text-[11px] font-black text-[#68758b]">{label}</span><input aria-label={label} type="number" min="0.1" step={key === "count" ? "1" : "0.1"} value={dimensions[key]} onChange={(event) => setDimensions((current) => ({ ...current, [key]: event.target.value }))} className="h-11 w-full rounded-xl border border-[#d8e1f2] bg-white px-2 text-center text-[13px] font-black outline-none focus:border-brand-600" /></label>
+                ))}
+              </div>
+              <p className="mt-3 text-[12px] font-semibold text-[#68758b]">가로 × 세로 × 높이 × 수량 ÷ 1,000,000</p>
+              <button type="button" onClick={calculateVolume} className="mt-3 h-11 w-full rounded-xl bg-brand-700 text-[14px] font-black text-white">CBM 계산해서 입력</button>
+            </section>
+          )}
           {(mappingHint.origin || mappingHint.destination) && <p className="text-[10px] font-semibold text-brand-700">{mappingHint.origin ?? mappingHint.destination}</p>}
 
           <section><p className="mb-2 text-[12px] font-black text-[#7b879b]">희망 운송일</p><div className="grid grid-cols-3 gap-2">

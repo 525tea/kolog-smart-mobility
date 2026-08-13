@@ -49,14 +49,14 @@ export default function MarketplaceScreen({
           </button>
         </div>
 
-        <div className="flex h-[42px] items-center gap-2 rounded-[14px] bg-[#f2f5fa] px-3 text-[#9aa5b7]"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span className="text-xs font-semibold">노선 · 역 검색</span></div>
+        <div className="flex h-[42px] items-center gap-2 rounded-[14px] bg-[#f2f5fa] px-3 text-[#9aa5b7]"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span className="text-[13px] font-semibold">노선 · 역 검색</span></div>
 
         <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
           {filters.map((filter) => (
             <button
               key={filter.label}
               onClick={() => onFilter(filter.label)}
-              className={`whitespace-nowrap rounded-full px-[14px] py-2 text-[11px] font-extrabold transition ${
+              className={`whitespace-nowrap rounded-full px-[14px] py-2 text-[12px] font-extrabold transition ${
                 filter.active ? 'bg-[#2d49bd] text-white' : 'border border-[#dfe5f0] bg-white text-[#6d7a90]'
               }`}
             >
@@ -75,15 +75,15 @@ export default function MarketplaceScreen({
         {listings.map((listing, index) => (
           <button type="button" key={listing.listingId} onClick={() => onOpen(listing.listingId)} className="rounded-[22px] border border-[#dce3ee] bg-white p-4 text-left shadow-[0_5px_16px_rgba(43,61,91,.04)]">
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0"><div className="flex items-center gap-2"><span className="grid size-8 place-items-center rounded-[10px] bg-brand-50 text-brand-700"><TrainIcon /></span><h2 className="truncate text-[14px] font-black text-[#182237]">{listing.title}</h2></div><p className="mt-2 truncate text-[10px] font-semibold text-[#8a96aa]">{listing.subtitle}</p></div>
-              <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black ${listing.live ? "bg-[#fff3dc] text-[#b87400]" : "bg-brand-50 text-brand-700"}`}>{listing.live ? "모집중" : "참여 가능"}</span>
+              <div className="min-w-0"><div className="flex items-center gap-2"><span className="grid size-8 place-items-center rounded-[10px] bg-brand-50 text-brand-700"><TrainIcon /></span><h2 className="truncate text-[15px] font-black text-[#182237]">{listing.title}</h2></div><p className="mt-2 truncate text-[12px] font-semibold text-[#7a879c]">{listing.subtitle}</p></div>
+              <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${listing.live ? "bg-[#fff3dc] text-[#b87400]" : "bg-brand-50 text-brand-700"}`}>{listing.live ? "모집중" : "참여 가능"}</span>
             </div>
-            <div className="mt-4 flex items-end justify-between"><div><p className="text-[10px] font-semibold text-[#8a96aa]">{listing.departureLabel}</p><p className="mt-1 text-[13px] font-black text-brand-700">{listing.priceLabel.replace("예상 ", "")}</p></div><div className="text-right"><p className="text-[10px] font-black text-[#39a06b]">최대 {pct(listing.expectedSavedRate)} 절감</p><p className="mt-1 text-[10px] font-semibold text-[#8995a8]">{listing.remainingLabel}</p></div></div>
+            <div className="mt-4 flex items-end justify-between"><div><p className="text-[12px] font-semibold text-[#7a879c]">{listing.departureLabel}</p><p className="mt-1 text-[14px] font-black text-brand-700">{listing.priceLabel.replace("예상 ", "")}</p></div><div className="text-right"><p className="text-[12px] font-black text-[#27855a]">최대 {pct(listing.expectedSavedRate)} 절감</p><p className="mt-1 text-[12px] font-semibold text-[#7a879c]">{listing.remainingLabel}</p></div></div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#edf1f7]"><span className="block h-full rounded-full bg-brand-600" style={{ width: `${Math.max(12, Math.min(90, (listing.segments.reduce((sum, segment) => sum + segment.cbm, 0) / Math.max(1, listing.capacity)) * 100))}%` }} /></div>
-            {index === 0 && <p className="mt-2 text-right text-[10px] font-black text-brand-700">이 노선으로 등록 ›</p>}
+            {index === 0 && <p className="mt-2 text-right text-[12px] font-black text-brand-700">이 노선으로 등록 ›</p>}
           </button>
         ))}
-        {!loading && listings.length > 0 && <div className="mt-1 rounded-[22px] bg-[#2d49bd] px-4 py-4 text-white"><p className="text-[12px] font-black">원하는 노선이 없나요?</p><p className="mt-1 text-[10px] leading-4 text-white/65">화물을 먼저 등록하면 조건에 맞는 열차와<br />공동화물을 자동으로 찾아 알려드려요.</p></div>}
+        {!loading && listings.length > 0 && <div className="mt-1 rounded-[22px] bg-[#2d49bd] px-4 py-4 text-white"><p className="text-[13px] font-black">원하는 노선이 없나요?</p><p className="mt-1 text-[12px] leading-5 text-white/75">화물을 먼저 등록하면 조건에 맞는 열차와<br />공동화물을 자동으로 찾아 알려드려요.</p></div>}
       </div>
     </div>
   );

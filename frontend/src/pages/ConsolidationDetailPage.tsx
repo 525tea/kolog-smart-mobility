@@ -158,7 +158,7 @@ export function ConsolidationDetailPage() {
               navigate(`/capacity?cargoId=${cargoId}&groupId=${detail.id}`)
             }
           >
-            열차 잔여용량 확인
+            이 공동화물 선택하고 열차 확인
           </Button>
         </footer>
       )}

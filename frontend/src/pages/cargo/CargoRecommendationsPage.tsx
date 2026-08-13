@@ -17,7 +17,7 @@ export function CargoRecommendationsPage() {
   const [candidates, setCandidates] = useState<
     ConsolidationCandidateResponse[]
   >([]);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -29,9 +29,7 @@ export function CargoRecommendationsPage() {
         );
         setCargo(cargoRow);
         setCandidates(sorted);
-        setSelectedIds(
-          sorted.slice(0, 2).map((row) => row.consolidatedCargoId),
-        );
+        setSelectedId(sorted.find((row) => row.suitabilityScore >= 50)?.consolidatedCargoId ?? null);
       })
       .catch((cause) =>
         setError(
@@ -43,18 +41,13 @@ export function CargoRecommendationsPage() {
       .finally(() => setLoading(false));
   }, [cargoId]);
 
-  const selected = candidates.filter((row) =>
-    selectedIds.includes(row.consolidatedCargoId),
-  );
+  const selected = candidates.filter((row) => row.consolidatedCargoId === selectedId);
   const totalCbm =
     (cargo?.volumeCbm ?? 0) +
     selected.reduce((sum, row) => sum + row.recruitedWeightKg / 250, 0);
   const capacity = getRuntimeConfig()?.containerCapacityCbm ?? 67;
   const best = selected[0] ?? candidates[0];
-  const toggle = (id: number) =>
-    setSelectedIds((ids) =>
-      ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id],
-    );
+  const toggle = (id: number) => setSelectedId((current) => current === id ? null : id);
 
   return (
     <div className="flex min-h-full flex-col bg-[#f4f7fb]">
@@ -133,7 +126,7 @@ export function CargoRecommendationsPage() {
             </h2>
             <div className="space-y-3">
               {candidates.map((row, index) => {
-                const checked = selectedIds.includes(row.consolidatedCargoId);
+                const checked = selectedId === row.consolidatedCargoId;
                 const blocked = row.suitabilityScore < 50;
                 return (
                   <button
@@ -192,18 +185,21 @@ export function CargoRecommendationsPage() {
             -{best ? Math.round(best.appliedDiscountRate * 100) : 0}%
           </strong>
         </div>
-        <Button
-          fullWidth
-          disabled={!best}
-          onClick={() =>
-            best &&
-            navigate(
-              `/consolidated-cargos/${best.consolidatedCargoId}?cargoId=${cargoId}`,
-            )
-          }
-        >
-          공동운송 상세 보기
-        </Button>
+        <div className="min-w-0 flex-1">
+          <Button
+            fullWidth
+            disabled={!selected[0]}
+            onClick={() =>
+              selected[0] &&
+              navigate(
+                `/consolidated-cargos/${selected[0].consolidatedCargoId}?cargoId=${cargoId}`,
+              )
+            }
+          >
+            선택한 공동화물 확인
+          </Button>
+          <p className="mt-2 text-center text-[11px] font-semibold text-[#7a879c]">열차·운송수단 확인 후 예약 및 결제로 이동해요</p>
+        </div>
       </footer>
     </div>
   );

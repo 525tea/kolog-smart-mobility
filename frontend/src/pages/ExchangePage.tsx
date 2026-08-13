@@ -8,7 +8,8 @@ import { useNotifications } from "../context/NotificationContext";
 
 const BASE_RATE_PER_KG = 500;
 type SortKey = "price" | "capacity" | "time";
-const FILTER_TO_SORT: Record<string, SortKey> = { "가격 낮은 순": "price", "8월 3주": "time", "냉장": "capacity", "10 CBM 이상": "capacity" };
+const SORT_FILTERS: Record<string, SortKey> = { "가격 낮은 순": "price", "8월 3주": "time" };
+const DETAIL_FILTERS = ["냉장", "10 CBM 이상"] as const;
 
 export function ExchangePage() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export function ExchangePage() {
   const [trains, setTrains] = useState<TrainResponse[]>([]);
   const [groups, setGroups] = useState<ConsolidationDetailResponse[]>([]);
   const [sort, setSort] = useState<SortKey>("price");
+  const [detailFilters, setDetailFilters] = useState<Set<string>>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +39,12 @@ export function ExchangePage() {
     }),
   );
 
-  const sorted = [...rows].sort((a, b) => {
+  const filtered = rows.filter(({ wagon }) => {
+    if (detailFilters.has("냉장") && wagon.wagonType !== "REFRIGERATED") return false;
+    if (detailFilters.has("10 CBM 이상") && wagon.remainingWeightKg < 10_000) return false;
+    return true;
+  });
+  const sorted = [...filtered].sort((a, b) => {
     if (sort === "price") return a.estimatedRate - b.estimatedRate;
     if (sort === "capacity") return b.wagon.remainingWeightKg - a.wagon.remainingWeightKg;
     return new Date(a.train.departureAt).getTime() - new Date(b.train.departureAt).getTime();
@@ -57,15 +64,32 @@ export function ExchangePage() {
     badge: groupCount === 0 ? { text: "참여 가능", tone: "neutral" } : undefined,
   }));
 
+  function handleFilter(label: string) {
+    const nextSort = SORT_FILTERS[label];
+    if (nextSort) {
+      setSort(nextSort);
+      return;
+    }
+    setDetailFilters((current) => {
+      const next = new Set(current);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }
+
   return (
     <MarketplaceScreen
       route="잔여용량 거래소"
-      filters={Object.entries(FILTER_TO_SORT).map(([label, key]) => ({ label, active: sort === key }))}
+      filters={[
+        ...Object.entries(SORT_FILTERS).map(([label, key]) => ({ label, active: sort === key })),
+        ...DETAIL_FILTERS.map((label) => ({ label, active: detailFilters.has(label) })),
+      ]}
       listings={listings}
       unread={unreadCount}
       loading={loading}
       error={error}
-      onFilter={(label) => setSort(FILTER_TO_SORT[label] ?? "price")}
+      onFilter={handleFilter}
       onOpen={() => navigate("/cargo/new/form?mode=CO_LOAD")}
       onNotifications={() => navigate("/notifications")}
     />

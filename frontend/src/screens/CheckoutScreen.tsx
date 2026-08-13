@@ -39,12 +39,12 @@ export default function CheckoutScreen({
     <div className="flex min-h-full flex-col bg-base">
       <header className="px-[22px] py-[14px] flex items-center gap-[13px]">
         <button onClick={onBack} className="text-[18px] font-extrabold text-brand" aria-label="뒤로가기">←</button>
-        <h1 className="text-[18px] font-extrabold tracking-[-.5px] text-brand">결제</h1>
+        <h1 className="text-[18px] font-extrabold tracking-[-.5px] text-brand">예약 및 결제</h1>
         <span className="ml-auto"><Pill tone={expired ? 'danger' : 'warning'} solid pulse={!expired}>{holdRemaining}</Pill></span>
       </header>
 
       <div className="flex-1 px-[22px] pb-5 flex flex-col gap-[13px]">
-        <section className="rounded-[26px] bg-[#e7edff] p-5"><p className="text-[11px] font-black text-brand-700">최종 결제 금액</p><strong className="mt-1 block text-[31px] text-[#3049bd]">{won(total)}</strong><p className="mt-1 text-[10px] font-semibold text-[#68758b]">부가세 포함 · 세금계산서 자동 발행</p><p className="sr-only">{trainNumber} · {schedule} · {route} · {temperatureLabel} · 현재 모집 {recruitedWeightKg}kg / 목표 {targetWeightKg}kg</p></section>
+        <section className="rounded-[26px] bg-[#e7edff] p-5"><p className="text-[13px] font-black text-brand-700">최종 결제 금액</p><strong className="mt-1 block text-[31px] text-[#3049bd]">{won(total)}</strong><p className="mt-1 text-[12px] font-semibold text-[#68758b]">부가세 포함 · 세금계산서 자동 발행</p><p className="sr-only">{trainNumber} · {schedule} · {route} · {temperatureLabel} · 현재 모집 {recruitedWeightKg}kg / 목표 {targetWeightKg}kg</p></section>
 
         <Card className="gap-[13px]">
           <CardTitle>운임 명세</CardTitle>
@@ -81,7 +81,7 @@ export default function CheckoutScreen({
       </div>
 
       <footer className="px-[22px] pt-[14px] pb-[30px] bg-surface shadow-dock flex flex-col gap-[10px]">
-        <span className="text-[10.5px] font-semibold text-ink-faint text-center">결제 시 KO-LOG 운송약관 및 공동화물 배상규정에 동의합니다</span>
+        <span className="text-[12px] font-semibold text-ink-faint text-center">결제 시 KO-LOG 운송약관 및 공동화물 배상규정에 동의합니다</span>
         <PrimaryButton variant="action" onClick={() => onPay(method)} disabled={paying || expired}>
           {paying ? '결제 처리중…' : expired ? '모집이 마감되었습니다' : `${won(total)} 결제하기`}
         </PrimaryButton>

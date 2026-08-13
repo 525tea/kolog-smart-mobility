@@ -3,9 +3,10 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { CargoWizardHeader } from "../../components/layout/CargoWizardHeader";
 import { getCandidates, getConsolidationDetail, joinConsolidation } from "../../api/consolidation";
 import { getCargo } from "../../api/cargo";
+import { getMyPayments } from "../../api/reservation";
 import { ApiError } from "../../api/client";
 import { useNotifications } from "../../context/NotificationContext";
-import type { CargoResponse, ConsolidationCandidateResponse, ConsolidationDetailResponse } from "../../types";
+import type { CargoResponse, ConsolidationCandidateResponse, ConsolidationDetailResponse, ParticipationPaymentResponse } from "../../types";
 import CheckoutScreen, { type CheckoutFareLine } from "../../screens/CheckoutScreen";
 
 // 백엔드 PricingPolicy.RATE_PER_KG와 동일한 값 (kg당 기준운임, 할인 전). 화면에 "기본 철도운임" 항목을 보여주기 위해 사용.
@@ -21,6 +22,7 @@ export function CargoCheckoutPage() {
   const [cargo, setCargo] = useState<CargoResponse | null>(null);
   const [detail, setDetail] = useState<ConsolidationDetailResponse | null>(null);
   const [pricing, setPricing] = useState<ConsolidationCandidateResponse | null>(null);
+  const [completedPayment, setCompletedPayment] = useState<ParticipationPaymentResponse | null>(null);
   const [autoReschedule, setAutoReschedule] = useState(true);
   const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
@@ -29,11 +31,12 @@ export function CargoCheckoutPage() {
   useEffect(() => {
     if (!cargoId || !groupId) return;
     let cancelled = false;
-    Promise.all([getCargo(Number(cargoId)), getConsolidationDetail(Number(groupId))])
-      .then(async ([cargoRes, detailRes]) => {
+    Promise.all([getCargo(Number(cargoId)), getConsolidationDetail(Number(groupId)), getMyPayments()])
+      .then(async ([cargoRes, detailRes, payments]) => {
         if (cancelled) return;
         setCargo(cargoRes);
         setDetail(detailRes);
+        setCompletedPayment(payments.find((payment) => payment.cargoOrderId === Number(cargoId) && payment.consolidatedCargoId === Number(groupId)) ?? null);
         try {
           const candidates = await getCandidates(Number(cargoId));
           if (!cancelled) setPricing(candidates.find((c) => c.consolidatedCargoId === Number(groupId)) ?? null);
@@ -74,7 +77,26 @@ export function CargoCheckoutPage() {
   }
 
   if (cargo && detail && !pricing && (cargo.status === "PARTICIPATING" || cargo.status === "RESERVED")) {
-    return <div className="flex min-h-full flex-col bg-[#f4f7fb]"><CargoWizardHeader step="checkout" onBack={() => navigate(-1)} /><div className="flex flex-1 flex-col items-center justify-center px-6 text-center"><p className="text-lg font-black text-[#182237]">이미 결제가 완료된 화물입니다</p><p className="mt-2 text-sm text-[#78859b]">운송 현황에서 공동화물 진행 상태를 확인하세요.</p><button onClick={() => navigate(`/cargo/${cargo.id}/status?groupId=${detail.id}`)} className="mt-5 rounded-xl bg-brand-700 px-6 py-3 text-sm font-black text-white">운송 현황 보기</button></div></div>;
+    return (
+      <div className="flex min-h-full flex-col bg-[#f4f7fb]">
+        <CargoWizardHeader step="checkout" onBack={() => navigate(-1)} />
+        <main className="flex flex-1 flex-col px-5 py-6">
+          <section className="rounded-[26px] bg-[#e7edff] p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-[13px] font-black text-brand-700">결제 완료</p>
+              <span className="rounded-full bg-white px-3 py-1 text-[12px] font-black text-[#27855a]">완료</span>
+            </div>
+            <strong className="mt-2 block text-[30px] text-[#3049bd]">{completedPayment ? `${completedPayment.totalCost.toLocaleString()}원` : "결제 처리 완료"}</strong>
+            <p className="mt-2 text-[13px] font-bold text-[#68758b]">{detail.originStation} → {detail.destinationStation}</p>
+          </section>
+          <section className="mt-4 rounded-[22px] border border-[#dfe5f0] bg-white p-5">
+            <h2 className="text-[15px] font-black text-[#182237]">예약 및 결제가 완료됐어요</h2>
+            <p className="mt-2 text-[13px] leading-5 font-semibold text-[#68758b]">공동화물 진행 상태와 열차 배정 결과는 운송 현황에서 계속 확인할 수 있어요.</p>
+          </section>
+          <button onClick={() => navigate(`/cargo/${cargo.id}/status?groupId=${detail.id}`)} className="mt-auto h-14 rounded-2xl bg-brand-700 text-[16px] font-black text-white">운송 현황 보기</button>
+        </main>
+      </div>
+    );
   }
 
   if (!cargo || !detail || !pricing) {
