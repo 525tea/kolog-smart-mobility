@@ -19,9 +19,9 @@ export type ShipmentStatus =
 export type NodeState = 'DONE' | 'CURRENT' | 'PENDING' | 'DELAYED' | 'FAILED';
 
 export type PaymentMethodId = 'card' | 'later' | 'bank';
-export type PaymentStatus = 'PAID' | 'AWAITING_DEPOSIT' | 'SETTLEMENT_SCHEDULED' | 'FAILED';
+export type CheckoutPaymentStatus = 'PAID' | 'AWAITING_DEPOSIT' | 'SETTLEMENT_SCHEDULED' | 'FAILED';
 
-export type NotificationType =
+export type MarketplaceNotificationType =
   | 'MATCH_FOUND' | 'PAYMENT_DUE' | 'PICKUP_DELAY' | 'RAIL_DELAY'
   | 'DELIVERED' | 'SETTLEMENT' | 'DOC_REQUIRED';
 
@@ -174,7 +174,7 @@ export interface PaymentMethod {
 
 export interface Payment {
   paymentId: string;
-  status: PaymentStatus;
+  status: CheckoutPaymentStatus;
   paidAt: ISODateTime | null;
   receiptUrl: string | null;
   virtualAccount: { bank: string; accountNo: string; holder: string; expiresAt: ISODateTime } | null;
@@ -214,7 +214,7 @@ export interface Tracking {
 /* ── 알림 · 거래소 ── */
 export interface Notification {
   notificationId: string;
-  type: NotificationType;
+  type: MarketplaceNotificationType;
   title: string;
   body: string;
   shipmentId: string | null;
@@ -246,3 +246,7 @@ export interface Paged<T> {
   items: T[];
   nextCursor: string | null;
 }
+
+// 기존 기능 화면은 현재 백엔드 DTO와 1:1로 맞춘 타입을 사용한다.
+// 최신 디자인 프로토타입 타입과 이름이 겹치는 항목은 위에서 별도 이름으로 구분했다.
+export * from './types/index';

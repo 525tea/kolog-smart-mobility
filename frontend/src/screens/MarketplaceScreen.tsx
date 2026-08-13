@@ -1,111 +1,109 @@
-import { Card, Pill, IconChip, PulseDot, LoadBar, PhoneFrame, cbm, pct } from '../components/ui';
-import type { CoCargoCandidate, MarketplaceListing } from '../types';
+import { Card, IconChip, LoadBar, Pill, PulseDot, pct } from '../components/ui';
 
-/* A-19 거래소 — 흰 카드 + 알약 뱃지 리스트 뷰 */
+export interface MarketplaceViewItem {
+  listingId: string;
+  emoji: string;
+  title: string;
+  subtitle: string;
+  departureLabel: string;
+  priceLabel: string;
+  remainingLabel: string;
+  expectedSavedRate: number;
+  capacity: number;
+  segments: { owner: string; cbm: number }[];
+  badge?: { text: string; tone: 'warning' | 'neutral' | 'danger'; pulse?: boolean };
+  live?: boolean;
+}
 
 interface Props {
   route: string;
   filters: { label: string; active: boolean }[];
-  listings: (MarketplaceListing & {
-    emoji: string;
-    badge?: { text: string; tone: 'warning' | 'neutral' | 'danger'; pulse?: boolean };
-    live?: boolean;
-    segments: { owner: string; cbm: number }[];
-    capacityCbm: number;
-  })[];
+  listings: MarketplaceViewItem[];
   unread: number;
+  loading?: boolean;
+  error?: string | null;
   onFilter: (label: string) => void;
   onOpen: (listingId: string) => void;
+  onNotifications: () => void;
 }
 
-export default function MarketplaceScreen({ route, filters, listings, unread, onFilter, onOpen }: Props) {
+/** A-19 거래소. 화면 모양은 최신 프로토타입을 따르고 값과 이동은 실제 백엔드 데이터로 받는다. */
+export default function MarketplaceScreen({
+  route, filters, listings, unread, loading = false, error, onFilter, onOpen, onNotifications,
+}: Props) {
   return (
-    <PhoneFrame>
-      <header className="px-[22px] pt-[14px] pb-4 flex flex-col gap-[15px]">
+    <div className="flex min-h-full flex-col bg-base">
+      <header className="px-[22px] pt-[22px] pb-4 flex flex-col gap-[15px]">
         <div className="flex items-center gap-3">
           <div className="flex flex-col gap-[3px]">
             <span className="text-[11px] font-extrabold tracking-[.6px] text-ink-muted">공동화물 거래소</span>
             <h1 className="text-[22px] font-extrabold tracking-[-.7px] text-brand">{route}</h1>
           </div>
-          <div className="ml-auto relative w-[38px] h-[38px] rounded-full bg-surface shadow-chip flex items-center justify-center text-[16px]">
+          <button
+            type="button"
+            onClick={onNotifications}
+            aria-label={`알림 ${unread}개`}
+            className="ml-auto relative w-[38px] h-[38px] rounded-full bg-surface shadow-chip flex items-center justify-center text-[16px]"
+          >
             🔔
             {unread > 0 && <span className="absolute top-2 right-[9px] w-[7px] h-[7px] rounded-full bg-action" />}
-          </div>
+          </button>
         </div>
 
         <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
-          {filters.map((f) => (
+          {filters.map((filter) => (
             <button
-              key={f.label}
-              onClick={() => onFilter(f.label)}
+              key={filter.label}
+              onClick={() => onFilter(filter.label)}
               className={`px-[14px] py-2 rounded-full text-[11.5px] font-extrabold whitespace-nowrap transition ${
-                f.active ? 'bg-brand text-white' : 'bg-surface text-ink-muted shadow-chip'
+                filter.active ? 'bg-brand text-white' : 'bg-surface text-ink-muted shadow-chip'
               }`}
             >
-              {f.label}
+              {filter.label}
             </button>
           ))}
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto px-[22px] pb-5 flex flex-col gap-[13px] [scrollbar-width:none]">
-        {listings.map((l) => (
-          <Card key={l.listingId} className="gap-[13px] cursor-pointer" >
-            <div onClick={() => onOpen(l.listingId)} className="flex items-start gap-[11px]">
-              <IconChip emoji={l.emoji} tone={l.badge?.tone === 'warning' ? 'warning' : 'info'} size={42} />
-              <div className="flex-1 flex flex-col gap-1 min-w-0">
-                <span className="text-[15.5px] font-extrabold text-ink">{l.cargoName}</span>
-                <span className="text-[11.5px] font-semibold text-ink-muted truncate">
-                  {l.shipperMasked} · {cbm(l.cbm)}
-                </span>
-              </div>
-              {l.live ? (
+      <div className="flex-1 px-[22px] pb-5 flex flex-col gap-[13px]">
+        {loading && <p className="py-10 text-center text-sm text-ink-faint">열차 정보를 불러오는 중…</p>}
+        {!loading && error && <p className="rounded-chip bg-danger-soft px-4 py-3 text-center text-sm font-semibold text-danger">{error}</p>}
+        {!loading && !error && listings.length === 0 && (
+          <p className="py-10 text-center text-sm text-ink-faint">운행 예정 열차가 없어요.</p>
+        )}
+        {listings.map((listing) => (
+          <Card key={listing.listingId} className="gap-[13px] cursor-pointer">
+            <button type="button" onClick={() => onOpen(listing.listingId)} className="flex items-start gap-[11px] text-left">
+              <IconChip emoji={listing.emoji} tone={listing.badge?.tone === 'warning' ? 'warning' : 'info'} size={42} />
+              <span className="flex-1 flex flex-col gap-1 min-w-0">
+                <span className="text-[15.5px] font-extrabold text-ink">{listing.title}</span>
+                <span className="text-[11.5px] font-semibold text-ink-muted truncate">{listing.subtitle}</span>
+              </span>
+              {listing.live ? (
                 <span className="flex items-center gap-[6px] px-[11px] py-[5px] rounded-full bg-gold-soft">
                   <PulseDot size={7} />
-                  <span className="text-[10.5px] font-extrabold text-gold-text">집하중</span>
+                  <span className="text-[10.5px] font-extrabold text-gold-text">모집중</span>
                 </span>
-              ) : l.badge ? (
-                <Pill tone={l.badge.tone} solid={l.badge.tone === 'warning'} pulse={l.badge.pulse}>
-                  {l.badge.text}
+              ) : listing.badge ? (
+                <Pill tone={listing.badge.tone} solid={listing.badge.tone === 'warning'} pulse={listing.badge.pulse}>
+                  {listing.badge.text}
                 </Pill>
               ) : null}
-            </div>
+            </button>
 
             <div className="h-px bg-divider" />
-
             <div className="flex items-center gap-2">
-              <Pill tone="info">❄️ 냉장 -1~5℃</Pill>
-              <Pill tone="success">절감 {pct(l.expectedSavedRate)}</Pill>
-              <span className="ml-auto text-[11px] font-bold text-ink-muted">잔여 {cbm(l.remainingCbm)}</span>
+              <Pill tone="info">🚆 {listing.departureLabel}</Pill>
+              <Pill tone="success">절감 {pct(listing.expectedSavedRate)}</Pill>
+              <span className="ml-auto text-[11px] font-bold text-ink-muted">{listing.remainingLabel}</span>
             </div>
-
-            <LoadBar segments={l.segments} capacityCbm={l.capacityCbm} />
+            <LoadBar segments={listing.segments} capacityCbm={listing.capacity} />
+            <button type="button" onClick={() => onOpen(listing.listingId)} className="text-right text-[12px] font-extrabold text-brand">
+              {listing.priceLabel} · 이 노선으로 등록 ›
+            </button>
           </Card>
         ))}
       </div>
-
-      <TabBar active="market" />
-    </PhoneFrame>
-  );
-}
-
-function TabBar({ active }: { active: string }) {
-  const tabs = [
-    { id: 'home', emoji: '🏠', label: '홈' },
-    { id: 'cargo', emoji: '📦', label: '화물' },
-    { id: 'market', emoji: '🤝', label: '거래소' },
-    { id: 'my', emoji: '👤', label: '마이' },
-  ];
-  return (
-    <nav className="px-[22px] pt-3 pb-[30px] bg-surface shadow-dock flex justify-between">
-      {tabs.map((t) => (
-        <button key={t.id} className="flex-1 flex flex-col items-center gap-[5px]">
-          <span className={`text-[17px] ${active === t.id ? '' : 'opacity-40'}`}>{t.emoji}</span>
-          <span className={`text-[10px] font-extrabold ${active === t.id ? 'text-brand' : 'text-ink-faint'}`}>
-            {t.label}
-          </span>
-        </button>
-      ))}
-    </nav>
+    </div>
   );
 }

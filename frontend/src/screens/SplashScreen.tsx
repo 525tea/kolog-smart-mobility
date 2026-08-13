@@ -2,17 +2,30 @@ import { useEffect, useState } from 'react';
 
 /* A-00 스플래시 — 로고 플레이 (컨테이너 3장 슬라이드인 → 레일 스윕 → 워드마크 → 슬로건) */
 
-export default function SplashScreen({ onReady }: { onReady: () => void }) {
+interface Props {
+  onReady: () => void;
+  message?: string;
+  blocked?: boolean;
+}
+
+export default function SplashScreen({ onReady, message, blocked = false }: Props) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const t = setTimeout(() => setProgress(1), 1900);
-    const done = setTimeout(onReady, 3600);
+    const done = blocked ? undefined : setTimeout(onReady, 3600);
     return () => { clearTimeout(t); clearTimeout(done); };
-  }, [onReady]);
+  }, [blocked, onReady]);
 
   return (
-    <div className="relative w-full h-full bg-base overflow-hidden flex flex-col">
+    <div
+      className="app-shell relative h-full w-full cursor-pointer overflow-hidden bg-base flex flex-col"
+      onClick={() => !blocked && onReady()}
+      role="button"
+      tabIndex={0}
+      aria-label="KO-LOG 시작하기"
+      onKeyDown={(event) => event.key === 'Enter' && !blocked && onReady()}
+    >
       <div className="absolute -top-[90px] -right-[70px] w-[280px] h-[280px] rounded-full
                       bg-[radial-gradient(circle,rgba(245,176,65,.16),transparent_68%)]" />
       <div className="absolute -bottom-[60px] -left-20 w-[260px] h-[260px] rounded-full
@@ -48,7 +61,7 @@ export default function SplashScreen({ onReady }: { onReady: () => void }) {
           />
         </div>
         <span className="text-[10.5px] font-bold tracking-[1.6px] text-ink-faint">
-          한국철도공사 공동물류 플랫폼
+          {message ?? '한국철도공사 공동물류 플랫폼'}
         </span>
       </div>
     </div>

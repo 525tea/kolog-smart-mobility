@@ -1,10 +1,13 @@
-import { ReactNode } from 'react';
-import clsx from 'clsx';
+import type { ReactNode } from 'react';
+
+function classes(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(' ');
+}
 
 /* ─────────── Card ─────────── */
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={clsx('bg-surface rounded-card shadow-card p-[18px] flex flex-col', className)}>
+    <div className={classes('bg-surface rounded-card shadow-card p-[18px] flex flex-col', className)}>
       {children}
     </div>
   );
@@ -39,7 +42,7 @@ export function Pill({
     : 'bg-brand text-white';
   return (
     <span
-      className={clsx(
+      className={classes(
         'px-[11px] py-[5px] rounded-full text-[10.5px] font-extrabold whitespace-nowrap',
         solid ? solidBg : TONE[tone],
         pulse && 'animate-goldPulse',
@@ -57,7 +60,7 @@ export function IconChip({
   const bg = { info: 'bg-brand-soft', success: 'bg-teal-soft', warning: 'bg-gold-soft', danger: 'bg-danger-soft', neutral: 'bg-base' }[tone];
   return (
     <div
-      className={clsx('rounded-chip flex items-center justify-center shrink-0', bg)}
+      className={classes('rounded-chip flex items-center justify-center shrink-0', bg)}
       style={{ width: size, height: size, fontSize: size * 0.47 }}
     >
       {emoji}
@@ -92,11 +95,11 @@ export function ProgressNodes({ nodes }: { nodes: { label: string; state: NodeSt
                 <PulseDot color={delayed ? '#B4531F' : '#F5B041'} />
               ) : (
                 <div
-                  className={clsx('w-[9px] h-[9px] rounded-full shrink-0', filled ? 'bg-brand' : 'bg-hairline')}
+                  className={classes('w-[9px] h-[9px] rounded-full shrink-0', filled ? 'bg-brand' : 'bg-hairline')}
                 />
               )}
               {i < nodes.length - 1 && (
-                <div className={clsx('flex-1 h-[3px]', filled ? 'bg-brand' : 'bg-divider')} />
+                <div className={classes('flex-1 h-[3px]', filled ? 'bg-brand' : 'bg-divider')} />
               )}
             </div>
           );
@@ -135,7 +138,7 @@ export function PrimaryButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={clsx(
+      className={classes(
         'h-[56px] w-full rounded-cta text-white text-[16px] font-extrabold tracking-[-.3px]',
         'flex items-center justify-center transition active:scale-[.985] disabled:opacity-40',
         variant === 'action' ? 'bg-action shadow-cta' : 'bg-brand',
@@ -153,7 +156,7 @@ export function SelectRow({
   return (
     <div
       onClick={onSelect}
-      className={clsx(
+      className={classes(
         'flex items-center gap-[11px] px-[13px] py-3 rounded-[14px] cursor-pointer transition',
         selected ? 'bg-base' : 'bg-transparent hover:bg-base/60',
       )}
@@ -166,7 +169,7 @@ export function SelectRow({
         <span className="text-[11px] font-semibold text-ink-muted truncate">{detail}</span>
       </div>
       <div
-        className={clsx(
+        className={classes(
           'w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-extrabold shrink-0',
           selected ? 'bg-brand text-white' : 'bg-divider text-transparent',
         )}
