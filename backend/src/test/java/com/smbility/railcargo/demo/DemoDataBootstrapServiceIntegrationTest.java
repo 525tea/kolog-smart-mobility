@@ -52,10 +52,13 @@ class DemoDataBootstrapServiceIntegrationTest extends MySqlTestContainerSupport 
                 .isEqualTo(1);
 
         Long memberId = jdbcTemplate.queryForObject("SELECT id FROM member WHERE email = 'demo@kolog.kr'", Long.class);
+        Long case01Id = cargoId("demo-cargo-notion-01-complete");
         Long case03Id = cargoId("demo-cargo-notion-03");
         Long case08Id = cargoId("demo-cargo-notion-08");
         Long case09Id = cargoId("demo-cargo-notion-09");
 
+        jdbcTemplate.update("UPDATE cargo_order SET status = 'ANALYZED' WHERE id = ?", case01Id);
+        assertThat(consolidationService.getCandidates(memberId, case01Id)).isNotEmpty();
         assertThat(consolidationService.getCandidates(memberId, case03Id)).isNotEmpty();
         assertThatThrownBy(() -> consolidationService.getCandidates(memberId, case08Id))
                 .isInstanceOf(BusinessException.class)

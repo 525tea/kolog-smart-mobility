@@ -8,8 +8,8 @@ export function registerCargo(input: {
   destinationStation: string;
   desiredDate: string;
   serviceMode: "INDIVIDUAL" | "CO_LOAD";
-  /** 화물가액(원). 선택 입력 — 입력하면 적재보험료 산정에 쓰인다. */
-  declaredValueKrw?: number;
+  /** 화물가액(원). 적재보험료와 배상한도 산정을 위한 필수 입력값. */
+  declaredValueKrw: number;
 }) {
   return api.post<CargoResponse>("/api/v1/cargo-orders", input);
 }

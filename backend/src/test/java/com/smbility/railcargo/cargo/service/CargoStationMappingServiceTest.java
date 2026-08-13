@@ -20,6 +20,7 @@ class CargoStationMappingServiceTest {
     void 기존_서비스_역명은_그대로_사용한다() {
         assertThat(service.map("부산진역").railStation()).isEqualTo("부산진역");
         assertThat(service.map("부산진역").mapped()).isFalse();
+        assertThat(service.map("오봉역").railStation()).isEqualTo("오봉역(의왕)");
     }
 
     @Test

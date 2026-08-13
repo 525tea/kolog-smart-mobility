@@ -95,7 +95,7 @@ public class DemoDataBootstrapService implements ApplicationRunner {
         LocalDate case08Date = nextOccurrence(MonthDay.of(8, 27));
         LocalDate case09Date = nextOccurrence(MonthDay.of(8, 28));
 
-        Long case01TrainId = ensureDemoTrain("KLG-N01", "부산진역", "오봉역", case01Date,
+        Long case01TrainId = ensureDemoTrain("KLG-N01", "부산진역", "오봉역(의왕)", case01Date,
                 LocalTime.of(21, 0), 8);
         Long case03TrainId = ensureDemoTrain("KLG-N03", "부산진역", "신탄진역(대전)", case03Date,
                 LocalTime.of(21, 30), 5);
@@ -109,7 +109,7 @@ public class DemoDataBootstrapService implements ApplicationRunner {
         ensureDemoWagon(case08TrainId, "W-KLG-N08-H", "CONTAINER", true);
         ensureDemoWagon(case09TrainId, "W-KLG-N09-H", "CONTAINER", true);
 
-        upsertGroup("demo-group-notion-01-recruiting", "부산진역", "오봉역", "ROOM", false,
+        upsertGroup("demo-group-notion-01-recruiting", "부산진역", "오봉역(의왕)", "ROOM", false,
                 800, 250, case01Date, null, "RECRUITING", case01Date.atTime(18, 0));
         upsertGroup("demo-group-notion-03-recruiting", "부산진역", "신탄진역(대전)", "FROZEN", false,
                 800, 0, case03Date, null, "RECRUITING", case03Date.atTime(18, 30));
@@ -120,7 +120,7 @@ public class DemoDataBootstrapService implements ApplicationRunner {
 
         Long case01CargoId = upsertNotionCargo("demo-cargo-notion-01-complete", demoShipperId,
                 "즉석밥", "부산에서 서울로 즉석밥 500kg을 보내려고 합니다. 20kg씩 박스에 포장되어 있고 총 25박스입니다. 별도의 온도관리는 필요하지 않습니다.",
-                "부산진역", "오봉역", case01Date, 500, "ROOM", false, null,
+                "부산진역", "오봉역(의왕)", case01Date, 500, "ROOM", false, null,
                 "25BOX", "상온 운송 · 부피 확인 필요", 3_000_000, false, false, "RESERVED");
         Long case03CargoId = upsertNotionCargo("demo-cargo-notion-03", demoShipperId,
                 "냉동만두", "부산에서 대전까지 냉동만두 800킬로 정도 운송하고 싶습니다. 계속 영하 18도 이하로 유지되어야 합니다. 20kg 박스 40개입니다.",
@@ -137,7 +137,7 @@ public class DemoDataBootstrapService implements ApplicationRunner {
 
         resetTrialParticipations(List.of(case03CargoId, case08CargoId, case09CargoId));
 
-        Long completeGroupId = upsertGroup("demo-group-notion-01-complete", "부산진역", "오봉역", "ROOM", false,
+        Long completeGroupId = upsertGroup("demo-group-notion-01-complete", "부산진역", "오봉역(의왕)", "ROOM", false,
                 800, 800, case01Date, case01WagonId, "CONFIRMED", case01Date.atTime(18, 0));
         resetSingleParticipation(completeGroupId, case01CargoId, 258_000);
         resetMatchPrediction(completeGroupId, case01WagonId);

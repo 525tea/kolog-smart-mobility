@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CargoWizardHeader } from "../../components/layout/CargoWizardHeader";
 import { Button } from "../../components/ui/Button";
-import { Field, Input, TextArea } from "../../components/ui/Input";
+import { TextArea } from "../../components/ui/Input";
 import { extractCargoDocument, previewStationMapping, registerCargo } from "../../api/cargo";
 import { ApiError } from "../../api/client";
 import { useNotifications } from "../../context/NotificationContext";
@@ -144,6 +144,10 @@ export function CargoRegisterPage() {
       setError("항목별 입력에서는 품목명과 중량을 반드시 입력해주세요.");
       return;
     }
+    if (!declaredValueKrw || Number(declaredValueKrw) <= 0) {
+      setError("화물가액은 보험료와 배상한도 산정을 위해 반드시 입력해주세요.");
+      return;
+    }
     setError(null);
     setSubmitting(true);
     try {
@@ -179,7 +183,7 @@ export function CargoRegisterPage() {
         destinationStation,
         desiredDate,
         serviceMode,
-        declaredValueKrw: declaredValueKrw ? Number(declaredValueKrw) : undefined,
+        declaredValueKrw: Number(declaredValueKrw),
       });
       // 등록 완료 알림은 서버(NotificationService)가 이미 생성했다 - 배지/목록을 즉시 갱신만 한다.
       refreshNotifications();
@@ -238,6 +242,8 @@ export function CargoRegisterPage() {
               <button type="button" onClick={calculateVolume} className="mt-3 h-11 w-full rounded-xl bg-brand-700 text-[14px] font-black text-white">CBM 계산해서 입력</button>
             </section>
           )}
+          <DesignField label="화물가액 (원) *"><input aria-label="화물가액" type="text" inputMode="numeric" required placeholder="예) 30,000,000" value={declaredValueKrw ? Number(declaredValueKrw).toLocaleString("ko-KR") : ""} onChange={(event) => setDeclaredValueKrw(event.target.value.replace(/\D/g, ""))} className="design-input" /></DesignField>
+          <p className="-mt-3 text-[12px] font-semibold text-[#68758b]">{declaredValueKrw ? `약 ${formatKoreanAmount(Number(declaredValueKrw))}` : "적재보험료와 배상한도 산정을 위한 필수 항목입니다"}</p>
           {(mappingHint.origin || mappingHint.destination) && <p className="text-[10px] font-semibold text-brand-700">{mappingHint.origin ?? mappingHint.destination}</p>}
 
           <section><p className="mb-2 text-[12px] font-black text-[#7b879b]">희망 운송일</p><div className="grid grid-cols-3 gap-2">
@@ -252,8 +258,6 @@ export function CargoRegisterPage() {
 
           <details className="rounded-[18px] border border-[#e0e6f0]"><summary className="cursor-pointer px-4 py-3 text-[12px] font-black text-brand-700">문서·자연어·화물가액 추가 입력</summary><div className="space-y-3 border-t border-[#edf1f6] p-4">
             <TextArea rows={3} value={rawInput} onChange={(e) => { setRawInput(e.target.value); setInputMode(e.target.value ? "NATURAL" : "STRUCTURED"); }} placeholder="송장 내용이나 취급 요구사항을 자연어로 입력하세요." />
-            <Field label="화물가액 (선택, 원)"><Input type="text" inputMode="numeric" placeholder="예) 30,000,000" value={declaredValueKrw ? Number(declaredValueKrw).toLocaleString("ko-KR") : ""} onChange={(e) => setDeclaredValueKrw(e.target.value.replace(/\D/g, ""))} /></Field>
-            {declaredValueKrw && <p className="text-xs font-bold text-brand-700">약 {formatKoreanAmount(Number(declaredValueKrw))}</p>}
             <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-gray-300 px-4 py-3 text-sm font-semibold text-gray-600"><input type="file" accept=".pdf,.png,.jpg,.jpeg,.gif,.tif,.tiff,.bmp,.webp,.xls,.xlsx,.txt,.csv,.json,.xml,application/pdf,image/*" className="sr-only" disabled={extractingDocument} onChange={(e) => void handleDocumentAttachment(e.target.files?.[0])} />{extractingDocument ? "문서 분석 중…" : attachmentName ? `${attachmentName} 분석 완료` : "송장·발주서·엑셀·이미지 불러오기"}</label>
             {documentResult && <p className="rounded-xl bg-emerald-50 p-3 text-xs font-bold text-emerald-800">문서 분석 완료 · 필드 {documentResult.formFieldCount}개 · 표 {documentResult.tableCount}개</p>}
           </div></details>
