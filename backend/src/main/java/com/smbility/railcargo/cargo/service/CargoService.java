@@ -6,6 +6,7 @@ import com.smbility.railcargo.cargo.dto.CargoAnalysisResponse;
 import com.smbility.railcargo.cargo.dto.CargoCorrectionRequest;
 import com.smbility.railcargo.cargo.dto.CargoRegisterRequest;
 import com.smbility.railcargo.cargo.dto.CargoResponse;
+import com.smbility.railcargo.cargo.dto.StationMappingResponse;
 import com.smbility.railcargo.cargo.repository.CargoOrderRepository;
 import com.smbility.railcargo.common.exception.BusinessException;
 import com.smbility.railcargo.common.exception.ErrorCode;
@@ -24,6 +25,7 @@ public class CargoService {
     private final CargoOrderRepository cargoOrderRepository;
     private final ShipperService shipperService;
     private final CargoAiAnalysisService cargoAiAnalysisService;
+    private final CargoStationMappingService stationMappingService;
 
     @Transactional
     public CargoResponse register(Long memberId, CargoRegisterRequest request) {
@@ -59,6 +61,10 @@ public class CargoService {
         return cargoOrderRepository.findAllByShipperId(shipper.getId()).stream()
                 .map(CargoResponse::from)
                 .toList();
+    }
+
+    public StationMappingResponse previewStationMapping(String location) {
+        return stationMappingService.map(location);
     }
 
     public CargoOrder getEntity(Long cargoOrderId) {
