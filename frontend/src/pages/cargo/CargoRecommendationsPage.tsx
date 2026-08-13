@@ -47,6 +47,7 @@ export function CargoRecommendationsPage() {
     selected.reduce((sum, row) => sum + row.recruitedWeightKg / 250, 0);
   const capacity = getRuntimeConfig()?.containerCapacityCbm ?? 67;
   const best = selected[0] ?? candidates[0];
+  const savingsPercent = best ? Math.round(best.appliedDiscountRate * 100) : 0;
   const toggle = (id: number) => setSelectedId((current) => current === id ? null : id);
 
   return (
@@ -179,12 +180,10 @@ export function CargoRecommendationsPage() {
         )}
       </main>
       <footer className="flex items-center gap-4 border-t border-[#e7ecf4] bg-white px-5 pb-7 pt-4">
-        <div className="shrink-0">
+        {savingsPercent > 0 && <div className="shrink-0">
           <p className="text-[10px] font-bold text-[#8a96aa]">예상 절감</p>
-          <strong className="text-[18px] text-[#0ba995]">
-            -{best ? Math.round(best.appliedDiscountRate * 100) : 0}%
-          </strong>
-        </div>
+          <strong className="text-[18px] text-[#0ba995]">-{savingsPercent}%</strong>
+        </div>}
         <div className="min-w-0 flex-1">
           <Button
             fullWidth
