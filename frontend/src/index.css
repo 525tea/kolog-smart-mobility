@@ -1,0 +1,254 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-950: #0a2c74;
+  --color-brand-900: #18379f;
+  --color-brand-800: #2743b8;
+  --color-brand-700: #1b5cf0;
+  --color-brand-600: #2868f6;
+  --color-brand-500: #477df8;
+  --color-brand-100: #dbe6ff;
+  --color-brand-50: #e9effd;
+
+  --color-base: #f8f9fa;
+  --color-surface: #ffffff;
+  --color-divider: #f1f3f5;
+  --color-hairline: #e3e6ea;
+  --color-brand: #1b5cf0;
+  --color-brand-deep: #2743b8;
+  --color-brand-soft: #e9effd;
+  --color-brand-violet: #5a4ad6;
+  --color-ink: #333333;
+  --color-ink-muted: #666666;
+  --color-ink-faint: #9aa0a8;
+  --color-action: #ff8c00;
+  --color-gold: #f5b041;
+  --color-gold-soft: #fdf3e3;
+  --color-gold-text: #b47a18;
+  --color-teal: #12b5a5;
+  --color-teal-deep: #0e8073;
+  --color-teal-soft: #e6f7f3;
+  --color-danger: #b4531f;
+  --color-danger-soft: #fbeae0;
+
+  --radius-card: 18px;
+  --radius-chip: 13px;
+  --radius-cta: 16px;
+  --radius-phone: 30px;
+
+  --shadow-card: 0 3px 12px rgba(26, 35, 126, 0.07), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --shadow-chip: 0 2px 8px rgba(26, 35, 126, 0.07);
+  --shadow-cta: 0 10px 24px rgba(255, 140, 0, 0.32);
+  --shadow-dock: 0 -3px 16px rgba(26, 35, 126, 0.06);
+
+  --font-sans: "NanumSquare", "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
+}
+
+.design-input {
+  width: 100%; height: 54px; border: 1px solid #dfe5ef; border-radius: 18px;
+  background: #f3f6fb; padding: 0 18px; color: #172235; font-size: 14px; font-weight: 800; outline: none;
+}
+.design-input:focus { border-color: #2460ee; box-shadow: 0 0 0 3px rgba(36,96,238,.08); }
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+#root {
+  width: 100%;
+}
+
+body {
+  margin: 0;
+  background: #edf1f7;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 모바일 우선 디자인이라, 넓은 화면(웹)에서는 폰 너비 컨테이너로 가운데 정렬한다 */
+.app-shell {
+  max-width: 430px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: #f4f7fb;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* KO-LOG v2 A-00 */
+.app-shell.splash-shell {
+  isolation: isolate;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #111c2e;
+  box-shadow: 0 20px 50px rgba(10, 44, 116, 0.15);
+  outline: none;
+}
+
+.splash-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 26px;
+}
+
+.splash-logo-mark {
+  position: relative;
+  width: 190px;
+  height: 118px;
+  animation: rise-in 0.9s cubic-bezier(.2,.85,.25,1) both;
+}
+
+.splash-logo-cargo {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  display: flex;
+  align-items: end;
+  gap: 5px;
+  transform: translateX(-50%);
+}
+.splash-logo-box { width: 50px; border-radius: 9px; padding: 0 7px; display: flex; flex-direction: column; justify-content: center; gap: 5px; }
+.splash-logo-box::before,.splash-logo-box::after { content: ""; height: 4px; border-radius: 2px; background: rgba(255,255,255,.58); }
+.splash-logo-box.violet { height: 44px; background: #5a4ad6; }
+.splash-logo-box.blue { height: 58px; background: #1b5cf0; }
+.splash-logo-box.indigo { height: 34px; background: #2743b8; }
+.splash-logo-rail { position: absolute; left: 0; right: 0; bottom: 8px; height: 5px; border-radius: 3px; background: #111c2e; }
+.splash-logo-track { position: absolute; left: -9px; right: -9px; bottom: 0; height: 3px; border-radius: 2px; background: #e4e9f3; }
+.splash-logo-wheels { position: absolute; left: 42px; right: 42px; bottom: 13px; display: flex; justify-content: space-between; }
+.splash-logo-wheels span { width: 9px; height: 9px; border-radius: 50%; background: #111c2e; box-shadow: 18px 0 #111c2e; }
+
+.splash-brand h1 {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  animation: rise-in .9s cubic-bezier(.2,.85,.25,1) .2s both;
+}
+.splash-brand h1 span { color: #5a4ad6; }
+
+.splash-brand p {
+  margin: 10px 0 0;
+  color: #666;
+  font-size: 13px;
+  font-weight: 700;
+  animation: fade-up .8s ease .55s both;
+}
+
+.splash-start {
+  width: calc(100% - 120px);
+  margin: 0 auto;
+  padding-bottom: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: #9aa5b7;
+  white-space: nowrap;
+}
+
+.splash-start p {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.splash-pagination {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #f1f3f5;
+}
+
+.splash-pagination .active {
+  position: absolute;
+  width: 40%;
+  height: 100%;
+  border-radius: 3px;
+  background: #1b5cf0;
+  animation: splash-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes splash-sweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(28px) scale(.94); } to { opacity: 1; transform: none; } }
+@keyframes fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes ring { 0% { transform: scale(1); opacity: .55; } 75%, 100% { transform: scale(2.4); opacity: 0; } }
+@keyframes gold-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(245,176,65,.55); } 70% { box-shadow: 0 0 0 9px rgba(245,176,65,0); } }
+@keyframes slab-in { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes rail-sweep { from { transform: scaleX(0); opacity: 0; } 30% { opacity: 1; } to { transform: scaleX(1); opacity: 1; } }
+
+.animate-ring { animation: ring 2s ease-out infinite; }
+.animate-goldPulse { animation: gold-pulse 2.4s ease-out infinite; }
+.animate-riseIn { animation: rise-in .95s cubic-bezier(.2,.85,.25,1) both; }
+.animate-fadeUp { animation: fade-up .8s ease both; }
+.animate-slabIn { animation: slab-in .62s cubic-bezier(.2,.85,.25,1) both; }
+.animate-railSweep { animation: rail-sweep .9s cubic-bezier(.3,.8,.3,1) both; }
+.animate-sweep { animation: splash-sweep 1.4s ease-in-out infinite; }
+
+.screen-card {
+  border: 1px solid #dfe5f0;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(25, 51, 110, 0.035);
+}
+
+.screen-soft {
+  border-radius: 22px;
+  background: #eef3ff;
+}
+
+@media (min-width: 481px) {
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .app-shell {
+    /* 폰 화면 비율(대략 9:19.5)에 맞춰 높이를 제한 - 안 그러면 데스크탑의 큰 창 높이 그대로 늘어나서
+       너비 480px에 비해 비정상적으로 길쭉해 보인다. 내용이 넘치면 이 프레임 안에서만 스크롤한다. */
+    height: min(100vh, 844px);
+    max-height: 844px;
+    min-height: unset;
+    border-radius: 30px;
+    overflow-y: auto;
+    box-shadow: 0 0 40px rgba(15, 28, 77, 0.15);
+  }
+  .app-shell.splash-shell {
+    min-height: unset;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+.sort-results {
+  animation: sort-results-in 220ms ease-out;
+}
+
+@keyframes sort-results-in {
+  from {
+    opacity: 0.35;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

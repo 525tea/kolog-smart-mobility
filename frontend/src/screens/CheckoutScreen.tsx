@@ -1,4 +1,5 @@
-import { Card, CardTitle, Divider, IconChip, LoadBar, Pill, PrimaryButton, SelectRow, won } from '../components/ui';
+import { useState } from 'react';
+import { Card, CardTitle, Divider, Pill, PrimaryButton, SelectRow, won } from '../components/ui';
 import type { PaymentMethodId } from '../types';
 
 export interface CheckoutFareLine {
@@ -33,7 +34,7 @@ export default function CheckoutScreen({
   fareLines, total, savedAmount, holdRemaining, autoReschedule, onAutoRescheduleChange,
   onBack, onPay, paying = false, expired = false, error,
 }: Props) {
-  const method: PaymentMethodId = 'card';
+  const [method, setMethod] = useState<PaymentMethodId>('card');
   return (
     <div className="flex min-h-full flex-col bg-base">
       <header className="px-[22px] py-[14px] flex items-center gap-[13px]">
@@ -43,28 +44,7 @@ export default function CheckoutScreen({
       </header>
 
       <div className="flex-1 px-[22px] pb-5 flex flex-col gap-[13px]">
-        <Card className="gap-[14px]">
-          <div className="flex items-center gap-[11px]">
-            <IconChip emoji="🚆" />
-            <div className="flex-1 flex flex-col gap-[3px] min-w-0">
-              <span className="text-[15px] font-extrabold text-ink">{trainNumber}</span>
-              <span className="text-[11.5px] font-semibold text-ink-muted truncate">{schedule}</span>
-              <span className="text-[11.5px] font-semibold text-ink-muted truncate">{route}</span>
-            </div>
-            <Pill tone="info">{temperatureLabel}</Pill>
-          </div>
-          <div>
-            <div className="mb-2 flex justify-between text-[11px] font-bold text-ink-muted">
-              <span>현재 모집 {recruitedWeightKg.toLocaleString()}kg</span>
-              <span>목표 {targetWeightKg.toLocaleString()}kg</span>
-            </div>
-            <LoadBar
-              capacityCbm={targetWeightKg}
-              segments={[{ owner: 'CO_CARGO', cbm: Math.min(recruitedWeightKg, targetWeightKg) }]}
-              height={8}
-            />
-          </div>
-        </Card>
+        <section className="rounded-[26px] bg-[#e7edff] p-5"><p className="text-[11px] font-black text-brand-700">최종 결제 금액</p><strong className="mt-1 block text-[31px] text-[#3049bd]">{won(total)}</strong><p className="mt-1 text-[10px] font-semibold text-[#68758b]">부가세 포함 · 세금계산서 자동 발행</p><p className="sr-only">{trainNumber} · {schedule} · {route} · {temperatureLabel} · 현재 모집 {recruitedWeightKg}kg / 목표 {targetWeightKg}kg</p></section>
 
         <Card className="gap-[13px]">
           <CardTitle>운임 명세</CardTitle>
@@ -88,7 +68,9 @@ export default function CheckoutScreen({
 
         <Card className="gap-2">
           <CardTitle>결제 수단</CardTitle>
-          <SelectRow emoji="💳" title="가상 결제" detail="실제 승인 없이 데모 결제로 처리됩니다" selected onSelect={() => undefined} />
+          <SelectRow emoji="💳" title="법인카드 · 신한 1234" detail="즉시 결제 · 이용한도 3,200만원" selected={method === 'card'} onSelect={() => setMethod('card')} />
+          <SelectRow emoji="▤" title="월 정산 (후불)" detail="매월 말 마감 · 익월 10일 청구" selected={method === 'later'} onSelect={() => setMethod('later')} />
+          <SelectRow emoji="▣" title="계좌 이체" detail="기업은행 012-45678-01-011" selected={method === 'bank'} onSelect={() => setMethod('bank')} />
           <label className="mt-1 flex items-center gap-2 px-2 text-[12px] font-semibold text-ink-muted">
             <input type="checkbox" checked={autoReschedule} onChange={(event) => onAutoRescheduleChange(event.target.checked)} />
             미성립 시 다음 열차로 자동 이월

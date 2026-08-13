@@ -1,4 +1,4 @@
-import { Card, IconChip, LoadBar, Pill, PulseDot, pct } from '../components/ui';
+import { pct } from '../components/ui';
 
 export interface MarketplaceViewItem {
   listingId: string;
@@ -32,31 +32,32 @@ export default function MarketplaceScreen({
   route, filters, listings, unread, loading = false, error, onFilter, onOpen, onNotifications,
 }: Props) {
   return (
-    <div className="flex min-h-full flex-col bg-base">
-      <header className="px-[22px] pt-[22px] pb-4 flex flex-col gap-[15px]">
+    <div className="flex min-h-full flex-col bg-[#f4f7fb]">
+      <header className="flex flex-col gap-4 bg-white px-5 pb-4 pt-7">
         <div className="flex items-center gap-3">
-          <div className="flex flex-col gap-[3px]">
-            <span className="text-[11px] font-extrabold tracking-[.6px] text-ink-muted">공동화물 거래소</span>
-            <h1 className="text-[22px] font-extrabold tracking-[-.7px] text-brand">{route}</h1>
+          <div>
+            <h1 className="text-[20px] font-black tracking-[-.5px] text-[#111c2e]">{route}</h1>
           </div>
           <button
             type="button"
             onClick={onNotifications}
             aria-label={`알림 ${unread}개`}
-            className="ml-auto relative w-[38px] h-[38px] rounded-full bg-surface shadow-chip flex items-center justify-center text-[16px]"
+            className="relative ml-auto grid size-[38px] place-items-center rounded-xl bg-[#f3f6fb] text-[#40506a]"
           >
-            🔔
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
             {unread > 0 && <span className="absolute top-2 right-[9px] w-[7px] h-[7px] rounded-full bg-action" />}
           </button>
         </div>
+
+        <div className="flex h-[42px] items-center gap-2 rounded-[14px] bg-[#f2f5fa] px-3 text-[#9aa5b7]"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span className="text-xs font-semibold">노선 · 역 검색</span></div>
 
         <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
           {filters.map((filter) => (
             <button
               key={filter.label}
               onClick={() => onFilter(filter.label)}
-              className={`px-[14px] py-2 rounded-full text-[11.5px] font-extrabold whitespace-nowrap transition ${
-                filter.active ? 'bg-brand text-white' : 'bg-surface text-ink-muted shadow-chip'
+              className={`whitespace-nowrap rounded-full px-[14px] py-2 text-[11px] font-extrabold transition ${
+                filter.active ? 'bg-[#2d49bd] text-white' : 'border border-[#dfe5f0] bg-white text-[#6d7a90]'
               }`}
             >
               {filter.label}
@@ -65,45 +66,29 @@ export default function MarketplaceScreen({
         </div>
       </header>
 
-      <div className="flex-1 px-[22px] pb-5 flex flex-col gap-[13px]">
+      <div className="flex flex-1 flex-col gap-3 px-5 py-5">
         {loading && <p className="py-10 text-center text-sm text-ink-faint">열차 정보를 불러오는 중…</p>}
         {!loading && error && <p className="rounded-chip bg-danger-soft px-4 py-3 text-center text-sm font-semibold text-danger">{error}</p>}
         {!loading && !error && listings.length === 0 && (
           <p className="py-10 text-center text-sm text-ink-faint">운행 예정 열차가 없어요.</p>
         )}
-        {listings.map((listing) => (
-          <Card key={listing.listingId} className="gap-[13px] cursor-pointer">
-            <button type="button" onClick={() => onOpen(listing.listingId)} className="flex items-start gap-[11px] text-left">
-              <IconChip emoji={listing.emoji} tone={listing.badge?.tone === 'warning' ? 'warning' : 'info'} size={42} />
-              <span className="flex-1 flex flex-col gap-1 min-w-0">
-                <span className="text-[15.5px] font-extrabold text-ink">{listing.title}</span>
-                <span className="text-[11.5px] font-semibold text-ink-muted truncate">{listing.subtitle}</span>
-              </span>
-              {listing.live ? (
-                <span className="flex items-center gap-[6px] px-[11px] py-[5px] rounded-full bg-gold-soft">
-                  <PulseDot size={7} />
-                  <span className="text-[10.5px] font-extrabold text-gold-text">모집중</span>
-                </span>
-              ) : listing.badge ? (
-                <Pill tone={listing.badge.tone} solid={listing.badge.tone === 'warning'} pulse={listing.badge.pulse}>
-                  {listing.badge.text}
-                </Pill>
-              ) : null}
-            </button>
-
-            <div className="h-px bg-divider" />
-            <div className="flex items-center gap-2">
-              <Pill tone="info">🚆 {listing.departureLabel}</Pill>
-              <Pill tone="success">절감 {pct(listing.expectedSavedRate)}</Pill>
-              <span className="ml-auto text-[11px] font-bold text-ink-muted">{listing.remainingLabel}</span>
+        {listings.map((listing, index) => (
+          <button type="button" key={listing.listingId} onClick={() => onOpen(listing.listingId)} className="rounded-[22px] border border-[#dce3ee] bg-white p-4 text-left shadow-[0_5px_16px_rgba(43,61,91,.04)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0"><div className="flex items-center gap-2"><span className="grid size-8 place-items-center rounded-[10px] bg-brand-50 text-brand-700"><TrainIcon /></span><h2 className="truncate text-[14px] font-black text-[#182237]">{listing.title}</h2></div><p className="mt-2 truncate text-[10px] font-semibold text-[#8a96aa]">{listing.subtitle}</p></div>
+              <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black ${listing.live ? "bg-[#fff3dc] text-[#b87400]" : "bg-brand-50 text-brand-700"}`}>{listing.live ? "모집중" : "참여 가능"}</span>
             </div>
-            <LoadBar segments={listing.segments} capacityCbm={listing.capacity} />
-            <button type="button" onClick={() => onOpen(listing.listingId)} className="text-right text-[12px] font-extrabold text-brand">
-              {listing.priceLabel} · 이 노선으로 등록 ›
-            </button>
-          </Card>
+            <div className="mt-4 flex items-end justify-between"><div><p className="text-[10px] font-semibold text-[#8a96aa]">{listing.departureLabel}</p><p className="mt-1 text-[13px] font-black text-brand-700">{listing.priceLabel.replace("예상 ", "")}</p></div><div className="text-right"><p className="text-[10px] font-black text-[#39a06b]">최대 {pct(listing.expectedSavedRate)} 절감</p><p className="mt-1 text-[10px] font-semibold text-[#8995a8]">{listing.remainingLabel}</p></div></div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#edf1f7]"><span className="block h-full rounded-full bg-brand-600" style={{ width: `${Math.max(12, Math.min(90, (listing.segments.reduce((sum, segment) => sum + segment.cbm, 0) / Math.max(1, listing.capacity)) * 100))}%` }} /></div>
+            {index === 0 && <p className="mt-2 text-right text-[10px] font-black text-brand-700">이 노선으로 등록 ›</p>}
+          </button>
         ))}
+        {!loading && listings.length > 0 && <div className="mt-1 rounded-[22px] bg-[#2d49bd] px-4 py-4 text-white"><p className="text-[12px] font-black">원하는 노선이 없나요?</p><p className="mt-1 text-[10px] leading-4 text-white/65">화물을 먼저 등록하면 조건에 맞는 열차와<br />공동화물을 자동으로 찾아 알려드려요.</p></div>}
       </div>
     </div>
   );
+}
+
+function TrainIcon() {
+  return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="5" y="3" width="14" height="15" rx="3"/><path d="M8 7h8M8 11h8M8 21l2-3m6 0 2 3M8 15h.01M16 15h.01" strokeLinecap="round"/></svg>;
 }
