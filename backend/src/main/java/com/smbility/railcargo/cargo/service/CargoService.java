@@ -2,6 +2,7 @@ package com.smbility.railcargo.cargo.service;
 
 import com.smbility.railcargo.cargo.domain.CargoOrder;
 import com.smbility.railcargo.cargo.dto.CargoAiAnalysisResult;
+import com.smbility.railcargo.cargo.dto.CargoAnalysisResponse;
 import com.smbility.railcargo.cargo.dto.CargoCorrectionRequest;
 import com.smbility.railcargo.cargo.dto.CargoRegisterRequest;
 import com.smbility.railcargo.cargo.dto.CargoResponse;
@@ -33,12 +34,12 @@ public class CargoService {
     }
 
     @Transactional
-    public CargoResponse runAiAnalysis(Long cargoOrderId) {
+    public CargoAnalysisResponse runAiAnalysis(Long cargoOrderId) {
         CargoOrder cargoOrder = getEntity(cargoOrderId);
         CargoAiAnalysisResult result = cargoAiAnalysisService.analyze(cargoOrder);
         cargoOrder.applyAiAnalysis(result.weightKg(), result.volumeCbm(), result.temperatureCondition(),
                 result.hazardous(), result.packagingType(), result.handlingNote());
-        return CargoResponse.from(cargoOrder);
+        return CargoAnalysisResponse.of(CargoResponse.from(cargoOrder), result.lowConfidenceFields());
     }
 
     @Transactional

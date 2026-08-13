@@ -1,6 +1,7 @@
 package com.smbility.railcargo.cargo.controller;
 
 import com.smbility.railcargo.auth.jwt.LoginMember;
+import com.smbility.railcargo.cargo.dto.CargoAnalysisResponse;
 import com.smbility.railcargo.cargo.dto.CargoCorrectionRequest;
 import com.smbility.railcargo.cargo.dto.CargoRegisterRequest;
 import com.smbility.railcargo.cargo.dto.CargoResponse;
@@ -37,7 +38,7 @@ public class CargoController {
     }
 
     @PostMapping("/{cargoOrderId}/ai-analysis")
-    public ResponseEntity<CargoResponse> runAiAnalysis(@PathVariable Long cargoOrderId) {
+    public ResponseEntity<CargoAnalysisResponse> runAiAnalysis(@PathVariable Long cargoOrderId) {
         return ResponseEntity.ok(cargoService.runAiAnalysis(cargoOrderId));
     }
 
