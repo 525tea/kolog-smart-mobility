@@ -9,12 +9,14 @@ import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoCon
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@EnableScheduling
+// 자체 JWT 인증(auth.jwt 패키지)만 사용하므로 Spring Boot의 기본 인메모리 사용자 자동 구성은 제외한다.
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 @EnableConfigurationProperties({JwtProperties.class, GeminiProperties.class, DocumentAiProperties.class})
+@EnableScheduling
 public class RailcargoApiApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(RailcargoApiApplication.class, args);
-    }
+	public static void main(String[] args) {
+		SpringApplication.run(RailcargoApiApplication.class, args);
+	}
+
 }

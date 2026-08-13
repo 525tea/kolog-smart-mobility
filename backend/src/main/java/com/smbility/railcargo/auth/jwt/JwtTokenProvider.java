@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 public class JwtTokenProvider {
 
     private static final String CLAIM_ROLE = "role";
+    private static final String CLAIM_TOKEN_TYPE = "tokenType";
 
     private final SecretKey key;
     private final JwtProperties jwtProperties;
@@ -35,6 +36,27 @@ public class JwtTokenProvider {
                 .expiration(expiry)
                 .signWith(key)
                 .compact();
+    }
+
+    public String createRefreshToken(Member member) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + jwtProperties.refreshExpirationSeconds() * 1000);
+        return Jwts.builder()
+                .subject(String.valueOf(member.getId()))
+                .claim(CLAIM_ROLE, member.getRole().name())
+                .claim(CLAIM_TOKEN_TYPE, "refresh")
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(key)
+                .compact();
+    }
+
+    public LoginMember parseRefreshToken(String token) {
+        Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+        if (!"refresh".equals(claims.get(CLAIM_TOKEN_TYPE, String.class))) {
+            throw new JwtException("refresh token이 아닙니다.");
+        }
+        return new LoginMember(Long.valueOf(claims.getSubject()), MemberRole.valueOf(claims.get(CLAIM_ROLE, String.class)));
     }
 
     public LoginMember parse(String token) {
