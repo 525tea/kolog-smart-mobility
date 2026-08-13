@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the public invoice and purchase-order fixtures used by the demo."""
+"""Generate the public invoice, purchase-order, and MSDS fixtures used by the demo."""
 
 from pathlib import Path
 
@@ -116,14 +116,60 @@ def draw_png_purchase_order(path: Path) -> None:
     image.save(path, format="PNG", optimize=True)
 
 
+def draw_pdf_msds(path: Path) -> None:
+    pdfmetrics.registerFont(TTFont(FONT_NAME, FONT_PATH))
+    page_width, page_height = A4
+    doc = canvas.Canvas(str(path), pagesize=A4)
+    doc.setFillColor(colors.HexColor("#173C8F"))
+    doc.rect(0, page_height - 105, page_width, 105, stroke=0, fill=1)
+    doc.setFillColor(colors.white)
+    doc.setFont(FONT_NAME, 23)
+    doc.drawString(42, page_height - 56, "물질안전보건자료 (시연용 샘플)")
+    doc.setFont(FONT_NAME, 10)
+    doc.drawString(42, page_height - 80, "INDUSTRIAL CLEANER · DEMO SAFETY DATA SHEET")
+
+    sections = [
+        ("1. 제품 및 회사 정보", ["제품명: KOLOG 데모 산업용 세정제", "권장 용도: 시연 화면의 문서 첨부·운송 검증", "공급자: KOLOG Demo Lab"]),
+        ("2. 유해성·위험성", ["운송 위험등급: 미확정", "신호어: 검토 필요", "실제 운송 전 제조사 발급 MSDS와 UN 번호를 반드시 확인하세요."]),
+        ("3. 구성성분", ["시연용 비유해 혼합물 데이터", "실제 제품의 성분 또는 법적 분류를 나타내지 않습니다."]),
+        ("7. 취급 및 저장", ["밀폐 용기에 보관하고 직사광선과 고온을 피하세요.", "제품 라벨과 제조사 지침을 우선 적용하세요."]),
+        ("14. 운송에 필요한 정보", ["UN 번호: 미확정", "운송 위험등급: 미확정", "포장등급: 미확정", "운송 전 전문 담당자의 적합성 확인이 필요합니다."]),
+    ]
+    y = page_height - 145
+    for title, lines in sections:
+        doc.setFillColor(colors.HexColor("#EAF1FF"))
+        doc.roundRect(42, y - 23, page_width - 84, 29, 6, stroke=0, fill=1)
+        doc.setFillColor(colors.HexColor("#173C8F"))
+        doc.setFont(FONT_NAME, 12)
+        doc.drawString(54, y - 13, title)
+        y -= 42
+        doc.setFillColor(colors.HexColor("#263248"))
+        doc.setFont(FONT_NAME, 10)
+        for line in lines:
+            doc.drawString(56, y, "• " + line)
+            y -= 20
+        y -= 12
+
+    doc.setFillColor(colors.HexColor("#FFF3D6"))
+    doc.roundRect(42, 48, page_width - 84, 60, 8, stroke=0, fill=1)
+    doc.setFillColor(colors.HexColor("#8A5700"))
+    doc.setFont(FONT_NAME, 10)
+    doc.drawString(56, 82, "주의: 이 문서는 KOLOG 기능 시연만을 위한 샘플입니다.")
+    doc.drawString(56, 63, "법적 MSDS, 실제 제품 안전자료 또는 실제 운송 증빙으로 사용할 수 없습니다.")
+    doc.save()
+
+
 def main() -> None:
     PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
     invoice = PUBLIC_DIR / "INV_001_냉동닭가슴살.pdf"
     purchase_order = PUBLIC_DIR / "PO_002_생수.png"
+    msds = PUBLIC_DIR / "MSDS_산업용세정제_시연용.pdf"
     draw_pdf_invoice(invoice)
     draw_png_purchase_order(purchase_order)
+    draw_pdf_msds(msds)
     print(invoice)
     print(purchase_order)
+    print(msds)
 
 
 if __name__ == "__main__":

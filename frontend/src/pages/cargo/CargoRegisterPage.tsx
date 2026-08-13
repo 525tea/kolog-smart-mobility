@@ -56,7 +56,17 @@ function extractNumericValue(value: string | undefined) {
 }
 
 function extractDocumentSuggestions(text: string) {
-  const item = extractLabeledValue(text, ["품목", "품명", "상품명"]);
+  const structuredRows = [...text.matchAll(/품목:\s*([^|\n]+?)\s*\|\s*중량:\s*(\d[\d,]*(?:\.\d+)?)\s*(?:kg|킬로그램|킬로)\b([^\n]*)/gi)]
+    .map((match) => ({
+      item: match[1].trim(),
+      weightKg: Number(match[2].replaceAll(",", "")),
+      tail: match[3],
+    }))
+    .filter((row) => row.item && Number.isFinite(row.weightKg) && row.weightKg > 0);
+  const labeledItem = extractLabeledValue(text, ["품목", "품명", "상품명"]);
+  const item = structuredRows.length > 1
+    ? `${structuredRows[0].item} 외 ${structuredRows.length - 1}개 품목`
+    : structuredRows[0]?.item ?? (labeledItem?.includes("\t") || labeledItem?.includes("|") ? undefined : labeledItem);
   const labeledWeight = extractNumericValue(extractLabeledValue(text, ["총중량", "총 중량", "중량"]));
   const weights = [...text.matchAll(/(\d[\d,]*(?:\.\d+)?)\s*(?:kg|킬로그램|킬로)\b/gi)]
     .map((match) => Number(match[1].replaceAll(",", "")))
@@ -68,7 +78,9 @@ function extractDocumentSuggestions(text: string) {
 
   return {
     item,
-    weightKg: labeledWeight ?? (weights.length > 0 ? String(weights.reduce((sum, value) => sum + value, 0)) : undefined),
+    weightKg: structuredRows.length > 0
+      ? String(structuredRows.reduce((sum, row) => sum + row.weightKg, 0))
+      : labeledWeight ?? (weights.length > 0 ? String(weights.reduce((sum, value) => sum + value, 0)) : undefined),
     volumeCbm: volume,
     origin,
     destination,
@@ -288,13 +300,13 @@ export function CargoRegisterPage() {
         <main className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
           <h2 className="text-[22px] font-black leading-[1.35] text-[#152033]">어떤 화물을 보내시나요?<br />상품명만 넣으면 나머지는 AI가 채웁니다</h2>
 
-          <label><span className="mb-2 block text-[12px] font-black text-[#7b879b]">상품명</span><input aria-label="상품명" value={structured.cargoName} onChange={(e) => setStructured((s) => ({ ...s, cargoName: e.target.value }))} placeholder="예) 냉장 딸기 생과" className="h-[58px] w-full rounded-[20px] border-2 border-brand-600 bg-white px-5 text-[15px] font-black outline-none ring-[8px] ring-brand-50" /></label>
+          <label><span className="mb-2 block text-[12px] font-black text-[#7b879b]">상품명</span><input aria-label="상품명" value={structured.cargoName} onChange={(e) => setStructured((s) => ({ ...s, cargoName: e.target.value }))} required={inputMode === "STRUCTURED"} placeholder="예) 냉장 딸기 생과" className="h-[58px] w-full rounded-[20px] border-2 border-brand-600 bg-white px-5 text-[15px] font-black outline-none ring-[8px] ring-brand-50" /></label>
           <p className="-mt-3 text-[10px] font-semibold text-[#a0aabd]">입력한 상품명은 LLM 분류에 사용됩니다</p>
 
           <div className="grid grid-cols-2 gap-3">
             <DesignField label="출발지"><input aria-label="출발지" value={originStation} onChange={(e) => { setOriginStation(e.target.value); setOutOfCoverage((v) => ({ ...v, origin: false })); }} onBlur={() => checkStation("origin", originStation)} required className="design-input" placeholder="광양" /></DesignField>
             <DesignField label="도착지"><input aria-label="도착지" value={destinationStation} onChange={(e) => { setDestinationStation(e.target.value); setOutOfCoverage((v) => ({ ...v, destination: false })); }} onBlur={() => checkStation("destination", destinationStation)} required className="design-input" placeholder="의왕ICD" /></DesignField>
-            <DesignField label="중량 (kg)"><input aria-label="중량 (kg)" type="number" min={0.1} step="0.1" value={structured.weightKg} onChange={(e) => setStructured((s) => ({ ...s, weightKg: e.target.value }))} required className="design-input" placeholder="4,200" /></DesignField>
+            <DesignField label="중량 (kg)"><input aria-label="중량 (kg)" type="number" min={0.1} step="0.1" value={structured.weightKg} onChange={(e) => setStructured((s) => ({ ...s, weightKg: e.target.value }))} required={inputMode === "STRUCTURED"} className="design-input" placeholder="4,200" /></DesignField>
             <DesignField label="CBM"><input aria-label="CBM" type="number" min={0} step="0.1" value={structured.volumeCbm} onChange={(e) => setStructured((s) => ({ ...s, volumeCbm: e.target.value }))} className="design-input" placeholder="18.6" /></DesignField>
           </div>
           <button type="button" onClick={() => setShowVolumeCalculator((open) => !open)} className="-mt-3 self-end text-[12px] font-black text-brand-700">{showVolumeCalculator ? "부피 계산기 닫기" : "박스 규격으로 CBM 계산 ›"}</button>
@@ -335,6 +347,7 @@ export function CargoRegisterPage() {
                 {[
                   { label: "냉동 닭가슴살 송장", fileName: "INV_001_냉동닭가슴살.pdf", path: "/samples/INV_001_냉동닭가슴살.pdf", type: "application/pdf" },
                   { label: "생수 발주서", fileName: "PO_002_생수.png", path: "/samples/PO_002_생수.png", type: "image/png" },
+                  { label: "다품목 화물 목록", fileName: "화물목록_003.xlsx", path: "/samples/화물목록_003.xlsx", type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
                 ].map((sample) => (
                   <div key={sample.fileName} className="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2">
                     <div className="min-w-0"><p className="truncate text-[11px] font-black text-[#263248]">{sample.label}</p><a href={sample.path} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-brand-700">미리보기 ›</a></div>

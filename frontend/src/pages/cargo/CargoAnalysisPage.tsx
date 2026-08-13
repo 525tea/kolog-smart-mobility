@@ -123,6 +123,16 @@ export function CargoAnalysisPage() {
     }
   }
 
+  async function attachSampleMsds() {
+    try {
+      const response = await fetch("/samples/MSDS_산업용세정제_시연용.pdf");
+      if (!response.ok) throw new Error(`샘플 MSDS를 불러오지 못했습니다. (${response.status})`);
+      await uploadMsds(new File([await response.blob()], "MSDS_산업용세정제_시연용.pdf", { type: "application/pdf" }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "샘플 MSDS를 불러오지 못했습니다.");
+    }
+  }
+
   async function previewMsds() {
     if (!cargo?.msdsAttached) return;
     try {
@@ -182,6 +192,8 @@ export function CargoAnalysisPage() {
           <p className="font-black">{cargo.msdsAttached ? "✓ MSDS 제출 완료" : "MSDS 제출이 필요합니다"}</p>
           {cargo.msdsAttached && <div className="mt-2 rounded-xl bg-white/80 p-3"><p className="text-[10px] font-bold text-[#7b879b]">제출 파일</p><p className="mt-1 break-all text-[12px] font-black text-[#263248]">{cargo.msdsFileName}</p><button type="button" onClick={() => void previewMsds()} className="mt-2 font-black text-brand-700">파일 미리보기 ›</button></div>}
           <label className="mt-2 flex cursor-pointer justify-center rounded-xl bg-white px-3 py-2 font-black text-brand-700"><input type="file" className="sr-only" accept=".pdf,.png,.jpg,.jpeg" disabled={uploadingMsds} onChange={(e) => void uploadMsds(e.target.files?.[0])} />{uploadingMsds ? "저장 중…" : cargo.msdsAttached ? "MSDS 파일 교체" : "MSDS 파일 선택"}</label>
+          <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-white/80 p-3"><a href="/samples/MSDS_산업용세정제_시연용.pdf" target="_blank" rel="noreferrer" className="font-black text-brand-700">시연용 샘플 미리보기 ›</a><button type="button" disabled={uploadingMsds} onClick={() => void attachSampleMsds()} className="rounded-lg bg-brand-700 px-3 py-2 font-black text-white disabled:opacity-50">이 샘플 첨부</button></div>
+          <p className="mt-2 leading-5">실제 MSDS는 제품 제조사·공급사에서 발급받아야 합니다. 시연용 샘플은 기능 확인 전용이며 실제 운송에 사용할 수 없습니다.</p>
         </div>}
 
         {editing && <Card className="space-y-3"><p className="text-sm font-black">운송속성 수정</p><input className="design-input" type="number" placeholder="중량(kg)" value={form.weightKg} onChange={(e) => setForm((f) => ({ ...f, weightKg: e.target.value }))} /><input className="design-input" type="number" step="0.1" placeholder="부피(CBM)" value={form.volumeCbm} onChange={(e) => setForm((f) => ({ ...f, volumeCbm: e.target.value }))} /><select className="design-input" value={form.temperatureCondition} onChange={(e) => setForm((f) => ({ ...f, temperatureCondition: e.target.value as TemperatureCondition }))}><option value="ROOM">상온</option><option value="CONSTANT">정온</option><option value="REFRIGERATED">냉장</option><option value="FROZEN">냉동</option></select><label className="flex gap-2 text-xs"><input type="checkbox" checked={form.hazardous} onChange={(e) => setForm((f) => ({ ...f, hazardous: e.target.checked }))} />위험물</label><div className="flex gap-2"><Button variant="outline" fullWidth onClick={() => setEditing(false)}>취소</Button><Button fullWidth onClick={saveEdit}>저장</Button></div></Card>}

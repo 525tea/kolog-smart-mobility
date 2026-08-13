@@ -40,7 +40,8 @@ class CargoDocumentExtractionServiceTest {
         assertThat(result.extractedText())
                 .contains("[시트: 발주서]")
                 .contains("품목\t중량")
-                .contains("냉동 만두 파렛트 8개\t200kg");
+                .contains("냉동 만두 파렛트 8개\t200kg")
+                .contains("품목: 냉동 만두 파렛트 8개 | 중량: 200kg");
     }
 
     @Test

@@ -199,6 +199,7 @@ public class CargoDocumentExtractionService {
                     text.append(String.join("\t", cells)).append('\n');
                     if (text.length() > MAX_EXTRACTED_CHARS) break;
                 }
+                appendStructuredCargoRows(text, sheet, formatter, evaluator);
                 text.append('\n');
                 if (text.length() > MAX_EXTRACTED_CHARS) break;
             }
@@ -206,6 +207,62 @@ public class CargoDocumentExtractionService {
 
         return new CargoDocumentExtractionResponse(fileName, mimeType, "APACHE_POI",
                 limitText(text.toString(), warnings), sheetCount, 0, tableCount, List.copyOf(warnings));
+    }
+
+    private void appendStructuredCargoRows(StringBuilder target, Sheet sheet,
+                                           DataFormatter formatter, FormulaEvaluator evaluator) {
+        Row header = null;
+        int itemColumn = -1;
+        int weightColumn = -1;
+        for (Row row : sheet) {
+            int candidateItemColumn = findColumn(row, formatter, evaluator, "품목", "품명", "상품명");
+            int candidateWeightColumn = findColumn(row, formatter, evaluator, "중량", "총중량", "무게");
+            if (candidateItemColumn >= 0 && candidateWeightColumn >= 0) {
+                header = row;
+                itemColumn = candidateItemColumn;
+                weightColumn = candidateWeightColumn;
+                break;
+            }
+        }
+        if (header == null) return;
+
+        int temperatureColumn = findColumn(header, formatter, evaluator, "온도", "온도조건");
+        int originColumn = findColumn(header, formatter, evaluator, "출발지", "상차지");
+        int destinationColumn = findColumn(header, formatter, evaluator, "도착지", "하차지");
+        target.append("[구조화 화물 행]\n");
+        for (int rowIndex = header.getRowNum() + 1; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            if (row == null) continue;
+            String item = cellText(row, itemColumn, formatter, evaluator);
+            String weight = cellText(row, weightColumn, formatter, evaluator);
+            if (item.isBlank() || weight.isBlank() || item.equals("합계") || item.equals("총계")) continue;
+            String normalizedWeight = weight.matches(".*(?i)(kg|킬로그램|킬로|톤|t).*" ) ? weight : weight + "kg";
+            target.append("품목: ").append(item).append(" | 중량: ").append(normalizedWeight);
+            appendField(target, "온도조건", cellText(row, temperatureColumn, formatter, evaluator));
+            appendField(target, "출발지", cellText(row, originColumn, formatter, evaluator));
+            appendField(target, "도착지", cellText(row, destinationColumn, formatter, evaluator));
+            target.append('\n');
+        }
+    }
+
+    private int findColumn(Row row, DataFormatter formatter, FormulaEvaluator evaluator, String... labels) {
+        int lastCell = Math.max(row.getLastCellNum(), 0);
+        for (int index = 0; index < lastCell; index++) {
+            String value = cellText(row, index, formatter, evaluator).replaceAll("[\\s()_]+", "").toLowerCase(Locale.ROOT);
+            for (String label : labels) {
+                if (value.contains(label.replaceAll("[\\s()_]+", "").toLowerCase(Locale.ROOT))) return index;
+            }
+        }
+        return -1;
+    }
+
+    private String cellText(Row row, int column, DataFormatter formatter, FormulaEvaluator evaluator) {
+        if (column < 0) return "";
+        return formatter.formatCellValue(row.getCell(column, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK), evaluator).trim();
+    }
+
+    private void appendField(StringBuilder target, String label, String value) {
+        if (!value.isBlank()) target.append(" | ").append(label).append(": ").append(value);
     }
 
     private CargoDocumentExtractionResponse extractText(
