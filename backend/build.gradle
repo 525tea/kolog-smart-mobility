@@ -33,6 +33,11 @@ dependencies {
 	implementation 'org.flywaydb:flyway-mysql'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
 
+	// PDF·이미지 OCR/양식·표 추출 (Google Document AI Form Parser)
+	implementation 'com.google.cloud:google-cloud-document-ai:2.85.0'
+	// XLS/XLSX 셀·시트 구조 추출
+	implementation 'org.apache.poi:poi-ooxml:5.4.1'
+
 	// JWT
 	implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
 	runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"

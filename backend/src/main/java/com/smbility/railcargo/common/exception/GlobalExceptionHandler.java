@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @Slf4j
 @RestControllerAdvice
@@ -44,6 +45,15 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.builder()
                         .code(ErrorCode.ACCESS_DENIED.name())
                         .message(ErrorCode.ACCESS_DENIED.getDefaultMessage())
+                        .build());
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(ErrorCode.PAYLOAD_TOO_LARGE.getStatus())
+                .body(ErrorResponse.builder()
+                        .code(ErrorCode.PAYLOAD_TOO_LARGE.name())
+                        .message("파일은 최대 20MB까지 업로드할 수 있습니다.")
                         .build());
     }
 

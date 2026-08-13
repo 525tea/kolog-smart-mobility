@@ -1,0 +1,249 @@
+package com.smbility.railcargo.cargo.document;
+
+import com.google.cloud.documentai.v1.Document;
+import com.google.cloud.documentai.v1.DocumentProcessorServiceClient;
+import com.google.cloud.documentai.v1.DocumentProcessorServiceSettings;
+import com.google.cloud.documentai.v1.ProcessRequest;
+import com.google.cloud.documentai.v1.ProcessResponse;
+import com.google.cloud.documentai.v1.RawDocument;
+import com.google.protobuf.ByteString;
+import com.smbility.railcargo.cargo.dto.CargoDocumentExtractionResponse;
+import com.smbility.railcargo.common.exception.BusinessException;
+import com.smbility.railcargo.common.exception.ErrorCode;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class CargoDocumentExtractionService {
+
+    private static final long MAX_FILE_BYTES = 20L * 1024 * 1024;
+    private static final int MAX_EXTRACTED_CHARS = 200_000;
+    private static final float LOW_CONFIDENCE_THRESHOLD = 0.70f;
+
+    private static final Map<String, String> SUPPORTED_TYPES = Map.ofEntries(
+            Map.entry("pdf", "application/pdf"),
+            Map.entry("png", "image/png"),
+            Map.entry("jpg", "image/jpeg"),
+            Map.entry("jpeg", "image/jpeg"),
+            Map.entry("gif", "image/gif"),
+            Map.entry("tif", "image/tiff"),
+            Map.entry("tiff", "image/tiff"),
+            Map.entry("bmp", "image/bmp"),
+            Map.entry("webp", "image/webp"),
+            Map.entry("xls", "application/vnd.ms-excel"),
+            Map.entry("xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            Map.entry("txt", "text/plain"),
+            Map.entry("csv", "text/csv"),
+            Map.entry("json", "application/json"),
+            Map.entry("xml", "application/xml")
+    );
+
+    private final DocumentAiProperties properties;
+
+    public CargoDocumentExtractionResponse extract(MultipartFile file) {
+        validate(file);
+        String fileName = safeFileName(file.getOriginalFilename());
+        String extension = extension(fileName);
+        String mimeType = SUPPORTED_TYPES.get(extension);
+
+        try {
+            if (extension.equals("xls") || extension.equals("xlsx")) {
+                return extractWorkbook(file, fileName, mimeType);
+            }
+            if (extension.equals("txt") || extension.equals("csv") || extension.equals("json") || extension.equals("xml")) {
+                return extractText(file, fileName, mimeType);
+            }
+            return extractWithGoogleDocumentAi(file, fileName, mimeType);
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Document extraction failed for {}: {}", fileName, e.getMessage());
+            throw new BusinessException(ErrorCode.DOCUMENT_PROCESSING_FAILED,
+                    "문서를 읽지 못했습니다. 파일이 손상되지 않았는지 확인해주세요.");
+        }
+    }
+
+    private CargoDocumentExtractionResponse extractWithGoogleDocumentAi(
+            MultipartFile file, String fileName, String mimeType) throws IOException {
+        requireGoogleConfiguration();
+        String endpoint = properties.location() + "-documentai.googleapis.com:443";
+        DocumentProcessorServiceSettings settings = DocumentProcessorServiceSettings.newBuilder()
+                .setEndpoint(endpoint)
+                .build();
+        String processorName = "projects/%s/locations/%s/processors/%s".formatted(
+                properties.projectId(), properties.location(), properties.processorId());
+        RawDocument rawDocument = RawDocument.newBuilder()
+                .setContent(ByteString.copyFrom(file.getBytes()))
+                .setMimeType(mimeType)
+                .build();
+        ProcessRequest request = ProcessRequest.newBuilder()
+                .setName(processorName)
+                .setRawDocument(rawDocument)
+                .build();
+
+        try (DocumentProcessorServiceClient client = DocumentProcessorServiceClient.create(settings)) {
+            ProcessResponse response = client.processDocument(request);
+            return toResponse(fileName, mimeType, response.getDocument());
+        }
+    }
+
+    private CargoDocumentExtractionResponse toResponse(String fileName, String mimeType, Document document) {
+        String fullText = document.getText() == null ? "" : document.getText().trim();
+        StringBuilder structured = new StringBuilder(fullText);
+        List<String> warnings = new ArrayList<>();
+        int formFieldCount = 0;
+        int tableCount = 0;
+
+        for (Document.Page page : document.getPagesList()) {
+            if (!page.getFormFieldsList().isEmpty()) {
+                structured.append("\n\n[양식 필드 - ").append(page.getPageNumber()).append("페이지]\n");
+            }
+            for (Document.Page.FormField field : page.getFormFieldsList()) {
+                formFieldCount++;
+                String key = anchorText(field.getFieldName().getTextAnchor(), document.getText());
+                String value = anchorText(field.getFieldValue().getTextAnchor(), document.getText());
+                structured.append(key).append(": ").append(value).append('\n');
+                if (field.getFieldValue().getConfidence() < LOW_CONFIDENCE_THRESHOLD) {
+                    warnings.add("신뢰도가 낮은 항목을 확인해주세요: " + (key.isBlank() ? "이름 없는 필드" : key));
+                }
+            }
+
+            for (Document.Page.Table table : page.getTablesList()) {
+                tableCount++;
+                structured.append("\n[표 ").append(tableCount).append(" - ")
+                        .append(page.getPageNumber()).append("페이지]\n");
+                appendRows(structured, table.getHeaderRowsList(), document.getText());
+                appendRows(structured, table.getBodyRowsList(), document.getText());
+            }
+        }
+
+        if (fullText.isBlank()) {
+            warnings.add("문서에서 텍스트를 찾지 못했습니다. 스캔 해상도와 방향을 확인해주세요.");
+        }
+        String extracted = limitText(structured.toString(), warnings);
+        return new CargoDocumentExtractionResponse(fileName, mimeType,
+                "GOOGLE_DOCUMENT_AI_FORM_PARSER", extracted, document.getPagesCount(),
+                formFieldCount, tableCount, List.copyOf(warnings));
+    }
+
+    private void appendRows(StringBuilder target, List<Document.Page.Table.TableRow> rows, String fullText) {
+        for (Document.Page.Table.TableRow row : rows) {
+            List<String> cells = row.getCellsList().stream()
+                    .map(cell -> anchorText(cell.getLayout().getTextAnchor(), fullText))
+                    .toList();
+            target.append(String.join(" | ", cells)).append('\n');
+        }
+    }
+
+    private CargoDocumentExtractionResponse extractWorkbook(
+            MultipartFile file, String fileName, String mimeType) throws IOException {
+        StringBuilder text = new StringBuilder();
+        List<String> warnings = new ArrayList<>();
+        int tableCount = 0;
+        int sheetCount;
+
+        try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(file.getBytes()))) {
+            sheetCount = workbook.getNumberOfSheets();
+            DataFormatter formatter = new DataFormatter(Locale.KOREA);
+            FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
+            for (Sheet sheet : workbook) {
+                tableCount++;
+                text.append("[시트: ").append(sheet.getSheetName()).append("]\n");
+                for (Row row : sheet) {
+                    List<String> cells = new ArrayList<>();
+                    int lastCell = Math.max(row.getLastCellNum(), 0);
+                    for (int index = 0; index < lastCell; index++) {
+                        cells.add(formatter.formatCellValue(row.getCell(index, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK), evaluator));
+                    }
+                    text.append(String.join("\t", cells)).append('\n');
+                    if (text.length() > MAX_EXTRACTED_CHARS) break;
+                }
+                text.append('\n');
+                if (text.length() > MAX_EXTRACTED_CHARS) break;
+            }
+        }
+
+        return new CargoDocumentExtractionResponse(fileName, mimeType, "APACHE_POI",
+                limitText(text.toString(), warnings), sheetCount, 0, tableCount, List.copyOf(warnings));
+    }
+
+    private CargoDocumentExtractionResponse extractText(
+            MultipartFile file, String fileName, String mimeType) throws IOException {
+        List<String> warnings = new ArrayList<>();
+        String text = new String(file.getBytes(), StandardCharsets.UTF_8);
+        return new CargoDocumentExtractionResponse(fileName, mimeType, "DIRECT_TEXT",
+                limitText(text, warnings), 1, 0, 0, List.copyOf(warnings));
+    }
+
+    private String anchorText(Document.TextAnchor anchor, String fullText) {
+        StringBuilder result = new StringBuilder();
+        for (Document.TextAnchor.TextSegment segment : anchor.getTextSegmentsList()) {
+            int start = Math.toIntExact(segment.getStartIndex());
+            int end = Math.toIntExact(segment.getEndIndex());
+            if (start >= 0 && end <= fullText.length() && start <= end) {
+                result.append(fullText, start, end);
+            }
+        }
+        return result.toString().replaceAll("\\s+", " ").trim();
+    }
+
+    private String limitText(String value, List<String> warnings) {
+        String trimmed = value.trim();
+        if (trimmed.length() <= MAX_EXTRACTED_CHARS) return trimmed;
+        warnings.add("추출 결과가 길어 앞부분 200,000자만 사용합니다.");
+        return trimmed.substring(0, MAX_EXTRACTED_CHARS);
+    }
+
+    private void validate(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "분석할 파일을 선택해주세요.");
+        }
+        if (file.getSize() > MAX_FILE_BYTES) {
+            throw new BusinessException(ErrorCode.PAYLOAD_TOO_LARGE, "파일은 최대 20MB까지 업로드할 수 있습니다.");
+        }
+        String extension = extension(safeFileName(file.getOriginalFilename()));
+        if (!SUPPORTED_TYPES.containsKey(extension)) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT,
+                    "PDF, 이미지(PNG/JPG/TIFF/BMP/WEBP/GIF), 엑셀(XLS/XLSX) 파일을 업로드해주세요.");
+        }
+    }
+
+    private void requireGoogleConfiguration() {
+        if (!properties.enabled() || blank(properties.projectId()) || blank(properties.location()) || blank(properties.processorId())) {
+            throw new BusinessException(ErrorCode.DOCUMENT_AI_UNAVAILABLE,
+                    "Google Document AI가 아직 설정되지 않았습니다. 관리자에게 문의해주세요.");
+        }
+    }
+
+    private boolean blank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private String safeFileName(String original) {
+        String value = original == null || original.isBlank() ? "document" : original;
+        value = value.replace('\\', '/');
+        return value.substring(value.lastIndexOf('/') + 1);
+    }
+
+    private String extension(String fileName) {
+        int dot = fileName.lastIndexOf('.');
+        return dot < 0 ? "" : fileName.substring(dot + 1).toLowerCase(Locale.ROOT);
+    }
+}

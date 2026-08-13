@@ -11,6 +11,9 @@ public enum ErrorCode {
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
     INVALID_STATE_TRANSITION(HttpStatus.CONFLICT, "현재 상태에서 수행할 수 없는 요청입니다."),
     CAPACITY_EXCEEDED(HttpStatus.CONFLICT, "화차 잔여 적재용량을 초과했습니다."),
+    PAYLOAD_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "첨부파일 크기가 허용 범위를 초과했습니다."),
+    DOCUMENT_PROCESSING_FAILED(HttpStatus.BAD_GATEWAY, "문서 분석 서비스가 파일을 처리하지 못했습니다."),
+    DOCUMENT_AI_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "문서 분석 서비스가 설정되지 않았습니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다.");
 
     private final HttpStatus status;
