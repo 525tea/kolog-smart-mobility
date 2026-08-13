@@ -4,6 +4,7 @@ import com.smbility.railcargo.auth.jwt.LoginMember;
 import com.smbility.railcargo.cargo.dto.CargoAnalysisResponse;
 import com.smbility.railcargo.cargo.dto.CargoCorrectionRequest;
 import com.smbility.railcargo.cargo.dto.CargoDocumentExtractionResponse;
+import com.smbility.railcargo.cargo.dto.CargoMsdsFile;
 import com.smbility.railcargo.cargo.dto.CargoRegisterRequest;
 import com.smbility.railcargo.cargo.dto.CargoResponse;
 import com.smbility.railcargo.cargo.dto.StationMappingResponse;
@@ -11,9 +12,13 @@ import com.smbility.railcargo.cargo.service.CargoService;
 import com.smbility.railcargo.cargo.document.CargoDocumentExtractionService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -59,6 +64,25 @@ public class CargoController {
             @RequestPart("file") MultipartFile file
     ) {
         return ResponseEntity.ok(cargoService.attachMsds(loginMember.memberId(), cargoOrderId, file));
+    }
+
+    @GetMapping("/{cargoOrderId}/msds")
+    public ResponseEntity<byte[]> getMsds(
+            @AuthenticationPrincipal LoginMember loginMember,
+            @PathVariable Long cargoOrderId
+    ) {
+        CargoMsdsFile file = cargoService.getMsds(loginMember.memberId(), cargoOrderId);
+        MediaType mediaType;
+        try {
+            mediaType = MediaType.parseMediaType(file.contentType());
+        } catch (IllegalArgumentException ignored) {
+            mediaType = MediaType.APPLICATION_OCTET_STREAM;
+        }
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline()
+                        .filename(file.fileName(), StandardCharsets.UTF_8).build().toString())
+                .body(file.data());
     }
 
     @PatchMapping("/{cargoOrderId}")

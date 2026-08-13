@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.smbility.railcargo.common.exception.BusinessException;
+import com.smbility.railcargo.cargo.service.CargoService;
 import com.smbility.railcargo.consolidation.service.ConsolidationService;
 import com.smbility.railcargo.support.MySqlTestContainerSupport;
 import java.time.LocalDate;
@@ -24,6 +25,9 @@ class DemoDataBootstrapServiceIntegrationTest extends MySqlTestContainerSupport 
 
     @Autowired
     private ConsolidationService consolidationService;
+
+    @Autowired
+    private CargoService cargoService;
 
     @Test
     void notionCasesHaveEligibleRoutesAndRepresentativeCaseCompletesPaymentFlow() {
@@ -75,6 +79,13 @@ class DemoDataBootstrapServiceIntegrationTest extends MySqlTestContainerSupport 
                 .isNull();
         assertThat(value("SELECT msds_data FROM cargo_order WHERE demo_seed_key = 'demo-cargo-notion-09'"))
                 .isNotNull();
+        var msds = cargoService.getMsds(memberId, case09Id);
+        assertThat(msds.fileName()).isEqualTo("demo-msds-case-09.pdf");
+        assertThat(msds.contentType()).isEqualTo("application/pdf");
+        assertThat(msds.data()).isNotEmpty();
+        assertThatThrownBy(() -> cargoService.getMsds(memberId, case08Id))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("제출된 MSDS");
         assertThat(value("SELECT desired_date FROM cargo_order WHERE demo_seed_key = 'demo-cargo-notion-01-complete'"))
                 .isEqualTo(java.sql.Date.valueOf(nextOccurrence(MonthDay.of(8, 20))));
     }

@@ -83,8 +83,23 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return data as T;
 }
 
+async function requestBlob(path: string): Promise<Blob> {
+  const token = getToken();
+  const response = await fetch(`${BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    let body: ApiErrorBody | null = null;
+    try { body = text ? JSON.parse(text) as ApiErrorBody : null; } catch { body = null; }
+    throw new ApiError(response.status, body);
+  }
+  return response.blob();
+}
+
 export const api = {
   get: <T>(path: string, auth = true) => request<T>(path, { method: "GET", auth }),
+  getBlob: (path: string) => requestBlob(path),
   post: <T>(path: string, body?: unknown, auth = true) => request<T>(path, { method: "POST", body, auth }),
   postForm: <T>(path: string, body: FormData, auth = true) => request<T>(path, { method: "POST", body, auth }),
   patch: <T>(path: string, body?: unknown, auth = true) => request<T>(path, { method: "PATCH", body, auth }),

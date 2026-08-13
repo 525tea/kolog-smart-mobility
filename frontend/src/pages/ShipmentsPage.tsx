@@ -73,7 +73,7 @@ export function ShipmentsPage() {
                 <Progress status={cargo.status} />
               </button>
               <div className="mt-4 rounded-[22px] border border-[#dfe5f0] bg-white p-4">
-                <div className="flex items-center justify-between"><h3 className="text-[13px] font-black text-[#182237]">실시간 이벤트</h3><span className="text-[10px] font-bold text-brand-700">전체보기</span></div>
+                <div className="flex items-center justify-between"><h3 className="text-[13px] font-black text-[#182237]">실시간 이벤트</h3><button type="button" onClick={() => navigate("/notifications")} className="rounded-lg px-2 py-1 text-[11px] font-black text-brand-700">전체보기 ›</button></div>
                 <Event title={payment ? "공동화물 결제가 완료됐어요" : "공동화물 모집이 진행 중이에요"} detail={payment ? "운송 배정 정보를 확인해 주세요." : "목표 중량 달성 시 열차가 확정됩니다."} active />
                 <Event title="화물 정보가 정상 등록됐어요" detail={`${cargo.originStation} 출발 · ${cargo.destinationStation} 도착`} />
               </div>

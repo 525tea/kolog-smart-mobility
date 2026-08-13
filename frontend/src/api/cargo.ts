@@ -62,3 +62,7 @@ export function attachCargoMsds(cargoOrderId: number, file: File) {
   form.append("file", file);
   return api.postForm<CargoResponse>(`/api/v1/cargo-orders/${cargoOrderId}/msds`, form);
 }
+
+export function getCargoMsds(cargoOrderId: number) {
+  return api.getBlob(`/api/v1/cargo-orders/${cargoOrderId}/msds`);
+}

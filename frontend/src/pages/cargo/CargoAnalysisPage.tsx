@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { CargoWizardHeader } from "../../components/layout/CargoWizardHeader";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
-import { attachCargoMsds, correctCargo, getCargo, runAiAnalysis } from "../../api/cargo";
+import { attachCargoMsds, correctCargo, getCargo, getCargoMsds, runAiAnalysis } from "../../api/cargo";
 import { ApiError } from "../../api/client";
 import type { CargoResponse, HazardGrade, TemperatureCondition } from "../../types";
 import { useNotifications } from "../../context/NotificationContext";
@@ -123,6 +123,22 @@ export function CargoAnalysisPage() {
     }
   }
 
+  async function previewMsds() {
+    if (!cargo?.msdsAttached) return;
+    try {
+      const blob = await getCargoMsds(cargo.id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "MSDS 파일을 열지 못했습니다.");
+    }
+  }
+
   if (loading) {
     const classification = classifyCargo(cargo?.cargoName ?? "");
     return (
@@ -162,7 +178,11 @@ export function CargoAnalysisPage() {
         {detectedItems.length > 1 && <div className="rounded-[18px] bg-brand-50 p-4 text-[11px] font-semibold text-brand-800">감지 품목: {detectedItems.join(", ")}</div>}
         {lowConfidenceFields.length > 0 && <label className="flex items-start gap-2 rounded-[18px] bg-amber-50 p-4 text-[11px] font-semibold text-amber-800"><input type="checkbox" checked={reviewConfirmed} onChange={(e) => setReviewConfirmed(e.target.checked)} />표시된 값을 직접 확인했으며 이대로 진행합니다.</label>}
 
-        {cargo.requiresMsds && <div className={`rounded-[18px] p-4 text-[11px] ${cargo.msdsAttached ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}><p className="font-black">{cargo.msdsAttached ? "MSDS 제출 완료" : "MSDS 제출이 필요합니다"}</p><label className="mt-2 flex cursor-pointer justify-center rounded-xl bg-white px-3 py-2 font-black text-brand-700"><input type="file" className="sr-only" accept=".pdf,.png,.jpg,.jpeg" disabled={uploadingMsds} onChange={(e) => void uploadMsds(e.target.files?.[0])} />{uploadingMsds ? "저장 중…" : "MSDS 파일 선택"}</label></div>}
+        {cargo.requiresMsds && <div className={`rounded-[18px] p-4 text-[11px] ${cargo.msdsAttached ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
+          <p className="font-black">{cargo.msdsAttached ? "✓ MSDS 제출 완료" : "MSDS 제출이 필요합니다"}</p>
+          {cargo.msdsAttached && <div className="mt-2 rounded-xl bg-white/80 p-3"><p className="text-[10px] font-bold text-[#7b879b]">제출 파일</p><p className="mt-1 break-all text-[12px] font-black text-[#263248]">{cargo.msdsFileName}</p><button type="button" onClick={() => void previewMsds()} className="mt-2 font-black text-brand-700">파일 미리보기 ›</button></div>}
+          <label className="mt-2 flex cursor-pointer justify-center rounded-xl bg-white px-3 py-2 font-black text-brand-700"><input type="file" className="sr-only" accept=".pdf,.png,.jpg,.jpeg" disabled={uploadingMsds} onChange={(e) => void uploadMsds(e.target.files?.[0])} />{uploadingMsds ? "저장 중…" : cargo.msdsAttached ? "MSDS 파일 교체" : "MSDS 파일 선택"}</label>
+        </div>}
 
         {editing && <Card className="space-y-3"><p className="text-sm font-black">운송속성 수정</p><input className="design-input" type="number" placeholder="중량(kg)" value={form.weightKg} onChange={(e) => setForm((f) => ({ ...f, weightKg: e.target.value }))} /><input className="design-input" type="number" step="0.1" placeholder="부피(CBM)" value={form.volumeCbm} onChange={(e) => setForm((f) => ({ ...f, volumeCbm: e.target.value }))} /><select className="design-input" value={form.temperatureCondition} onChange={(e) => setForm((f) => ({ ...f, temperatureCondition: e.target.value as TemperatureCondition }))}><option value="ROOM">상온</option><option value="CONSTANT">정온</option><option value="REFRIGERATED">냉장</option><option value="FROZEN">냉동</option></select><label className="flex gap-2 text-xs"><input type="checkbox" checked={form.hazardous} onChange={(e) => setForm((f) => ({ ...f, hazardous: e.target.checked }))} />위험물</label><div className="flex gap-2"><Button variant="outline" fullWidth onClick={() => setEditing(false)}>취소</Button><Button fullWidth onClick={saveEdit}>저장</Button></div></Card>}
       </main>

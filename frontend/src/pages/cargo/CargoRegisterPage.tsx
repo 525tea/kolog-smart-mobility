@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CargoWizardHeader } from "../../components/layout/CargoWizardHeader";
 import { Button } from "../../components/ui/Button";
@@ -36,6 +36,10 @@ function formatKoreanAmount(value: number) {
   return `${value.toLocaleString("ko-KR")}원`;
 }
 
+function toLocalDateValue(date = new Date()) {
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+}
+
 export function CargoRegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -46,9 +50,7 @@ export function CargoRegisterPage() {
   const [desiredDate, setDesiredDate] = useState(() => {
     const queryDate = searchParams.get("date");
     if (queryDate) return queryDate;
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return [tomorrow.getFullYear(), String(tomorrow.getMonth() + 1).padStart(2, "0"), String(tomorrow.getDate()).padStart(2, "0")].join("-");
+    return toLocalDateValue();
   });
   const [cargoType] = useState<CargoType>("GENERAL");
   const [tempOption] = useState<TempOption | null>(null);
@@ -72,6 +74,11 @@ export function CargoRegisterPage() {
   const [attachmentName, setAttachmentName] = useState<string | null>(null);
   const [documentResult, setDocumentResult] = useState<CargoDocumentExtractionResponse | null>(null);
   const [extractingDocument, setExtractingDocument] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  const [customDateSelected, setCustomDateSelected] = useState(() => {
+    const queryDate = searchParams.get("date");
+    return Boolean(queryDate && queryDate !== toLocalDateValue());
+  });
 
   async function checkStation(kind: "origin" | "destination", location: string) {
     if (!location.trim()) return;
@@ -195,8 +202,6 @@ export function CargoRegisterPage() {
     }
   }
 
-  const nextDate = (() => { const date = new Date(`${desiredDate}T12:00:00`); date.setDate(date.getDate() + 1); return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-"); })();
-
   function calculateVolume() {
     const width = Number(dimensions.widthCm);
     const depth = Number(dimensions.depthCm);
@@ -246,10 +251,12 @@ export function CargoRegisterPage() {
           <p className="-mt-3 text-[12px] font-semibold text-[#68758b]">{declaredValueKrw ? `약 ${formatKoreanAmount(Number(declaredValueKrw))}` : "적재보험료와 배상한도 산정을 위한 필수 항목입니다"}</p>
           {(mappingHint.origin || mappingHint.destination) && <p className="text-[10px] font-semibold text-brand-700">{mappingHint.origin ?? mappingHint.destination}</p>}
 
-          <section><p className="mb-2 text-[12px] font-black text-[#7b879b]">희망 운송일</p><div className="grid grid-cols-3 gap-2">
-            <DesignDate value={desiredDate} active onClick={() => undefined} />
-            <DesignDate value={nextDate} onClick={() => setDesiredDate(nextDate)} />
-            <label className="grid h-[54px] cursor-pointer place-items-center rounded-[18px] bg-[#f2f5fb] text-[12px] font-black text-[#68758b]">직접 선택<input type="date" value={desiredDate} onChange={(e) => setDesiredDate(e.target.value)} className="sr-only" /></label>
+          <section><p className="mb-2 text-[12px] font-black text-[#7b879b]">희망 운송일</p><div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => { setDesiredDate(toLocalDateValue()); setCustomDateSelected(false); }} className={`h-[54px] rounded-[18px] text-[12px] font-black ${!customDateSelected ? "border-2 border-brand-600 bg-brand-50 text-brand-700" : "bg-[#f2f5fb] text-[#68758b]"}`}>오늘</button>
+            <button type="button" onClick={() => { const input = dateInputRef.current; if (!input) return; if (typeof input.showPicker === "function") input.showPicker(); else input.click(); }} className={`relative grid h-[54px] place-items-center rounded-[18px] text-[12px] font-black ${customDateSelected ? "bg-brand-700 text-white" : "bg-[#f2f5fb] text-[#68758b]"}`}>
+              <span>{customDateSelected ? `${desiredDate.slice(5).replace("-", ".")} 선택됨` : "일자 직접 선택"}</span>
+              <input ref={dateInputRef} aria-label="희망 운송일 직접 선택" type="date" min={toLocalDateValue()} value={desiredDate} onChange={(e) => { if (e.target.value) { setDesiredDate(e.target.value); setCustomDateSelected(true); } }} className="pointer-events-none absolute h-px w-px opacity-0" />
+            </button>
           </div></section>
 
           <div className="rounded-[18px] bg-[#f3f6fc] px-4 py-3 text-[11px] font-semibold leading-5 text-[#59667b]"><span className="mr-2 inline-block size-2 rounded-full bg-brand-600" />파렛트 규격과 적재 방식은 다음 단계에서 AI 분류 결과와 함께 자동 제안됩니다.</div>
@@ -477,4 +484,3 @@ export function CargoRegisterPage() {
 } */
 
 function DesignField({ label, children }: { label: string; children: React.ReactNode }) { return <label><span className="mb-2 block text-[12px] font-black text-[#7b879b]">{label}</span>{children}</label>; }
-function DesignDate({ value, active = false, onClick }: { value: string; active?: boolean; onClick: () => void }) { const date = new Date(`${value}T00:00:00`); return <button type="button" onClick={onClick} className={`h-[54px] rounded-[18px] text-[12px] font-black ${active ? "border-2 border-brand-600 bg-brand-50 text-brand-700" : "bg-[#f2f5fb] text-[#68758b]"}`}>{date.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" })}</button>; }

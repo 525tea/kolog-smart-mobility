@@ -4,6 +4,7 @@ import com.smbility.railcargo.cargo.domain.CargoOrder;
 import com.smbility.railcargo.cargo.dto.CargoAiAnalysisResult;
 import com.smbility.railcargo.cargo.dto.CargoAnalysisResponse;
 import com.smbility.railcargo.cargo.dto.CargoCorrectionRequest;
+import com.smbility.railcargo.cargo.dto.CargoMsdsFile;
 import com.smbility.railcargo.cargo.dto.CargoRegisterRequest;
 import com.smbility.railcargo.cargo.dto.CargoResponse;
 import com.smbility.railcargo.cargo.dto.StationMappingResponse;
@@ -109,6 +110,16 @@ public class CargoService {
         } catch (IOException e) {
             throw new BusinessException(ErrorCode.DOCUMENT_PROCESSING_FAILED, "MSDS 파일을 저장하지 못했습니다.");
         }
+    }
+
+    public CargoMsdsFile getMsds(Long memberId, Long cargoOrderId) {
+        CargoOrder cargoOrder = getOwnedEntity(memberId, cargoOrderId);
+        if (!cargoOrder.isMsdsAttached()) {
+            throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND, "제출된 MSDS 파일이 없습니다.");
+        }
+        String contentType = cargoOrder.getMsdsContentType();
+        if (contentType == null || contentType.isBlank()) contentType = "application/octet-stream";
+        return new CargoMsdsFile(cargoOrder.getMsdsFileName(), contentType, cargoOrder.getMsdsData());
     }
 
     public StationMappingResponse previewStationMapping(String location) {
